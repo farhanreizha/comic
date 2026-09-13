@@ -99,6 +99,9 @@ export type NewPageRow = {
 	number: number;
 	storageKey: string;
 	contentType: string;
+	/** Pixel dimensions, decoded at ingest (social-admin.md decision 8). */
+	width: number;
+	height: number;
 };
 
 export type NewChapterRow = {

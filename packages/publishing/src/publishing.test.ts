@@ -15,11 +15,62 @@ import {
 
 /* ---------------------------------------------------------------- fixtures */
 
-const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3]);
-const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 9]);
-const WEBP = new Uint8Array([
-	0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50, 4,
+/**
+ * REAL decodable images: ingest now reads dimensions with Bun.Image metadata
+ * (social-admin.md decision 8), and an undecodable page is INVALID_INPUT — so
+ * the fixtures must survive a real decode. A tiny PNG encoder (zlib via the
+ * fflate dep already in this file) covers PNG; Bun.Image itself produces the
+ * JPEG and WebP from it. Dimensions are asserted, never guessed.
+ */
+import { crc32, deflateSync } from "node:zlib";
+
+function makePng(width: number, height: number): Uint8Array {
+	const chunk = (type: string, data: Uint8Array): number[] => {
+		const td = new TextEncoder().encode(type);
+		const len = new Uint8Array(4);
+		new DataView(len.buffer).setUint32(0, data.length);
+		const body = new Uint8Array(td.length + data.length);
+		body.set(td);
+		body.set(data, td.length);
+		const crc = new Uint8Array(4);
+		new DataView(crc.buffer).setUint32(0, crc32(body) >>> 0);
+		return [...len, ...body, ...crc];
+	};
+	const ihdr = new Uint8Array(13);
+	const dv = new DataView(ihdr.buffer);
+	dv.setUint32(0, width);
+	dv.setUint32(4, height);
+	ihdr[8] = 8; // bit depth
+	ihdr[9] = 2; // truecolor RGB
+	const rows: number[] = [];
+	for (let y = 0; y < height; y++) {
+		rows.push(0); // filter: none
+		for (let x = 0; x < width * 3; x++) rows.push((x + y) % 256);
+	}
+	return new Uint8Array([
+		...[0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a],
+		...chunk("IHDR", ihdr),
+		...chunk("IDAT", new Uint8Array(deflateSync(Buffer.from(rows)))),
+		...chunk("IEND", new Uint8Array(0)),
+	]);
+}
+
+const toBytes = (b: ArrayBuffer | Uint8Array): Uint8Array =>
+	b instanceof Uint8Array ? b : new Uint8Array(b);
+
+// 4×6 PNG and the JPEG (6×4 after a 90° rotate) + WebP derived from it.
+const PNG = makePng(4, 6);
+const PNG_20X10 = makePng(20, 10);
+const JPEG = toBytes(
+	await new Bun.Image(PNG).rotate(90).jpeg({ quality: 70 }).toBuffer(),
+);
+const WEBP = toBytes(await new Bun.Image(PNG).webp({ quality: 70 }).toBuffer());
+/** Sniffs as PNG magic but cannot decode — the rejected-file case. */
+const GARBAGE_PNG = new Uint8Array([
+	0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 9,
 ]);
+
+const dimsOf = async (bytes: Uint8Array) => new Bun.Image(bytes).metadata();
 
 function upload(name: string, bytes: Uint8Array): Upload {
 	return { filename: name, contentType: "application/octet-stream", bytes };
@@ -486,6 +537,48 @@ describe("publishing — interface tests (docs/design/write-path.md)", () => {
 		);
 		expect(err.code).toBe("TOO_LARGE");
 		expect(err.filename).toBe("page1.png");
+	});
+
+	// 11 (spec). Ingest stores REAL dimensions; undecodable image → INVALID_INPUT naming the file.
+	test("14. dimensions captured for PNG and JPEG; garbage PNG named and rejected with nothing written", async () => {
+		const { publishing, data, storage } = setup();
+		const chapter = await publishing.ingestChapter(OWNER, {
+			source: {
+				kind: "images",
+				uploads: [upload("a.png", PNG), upload("b.jpg", JPEG)],
+			},
+			target: { kind: "newChapter", comicId: "c1" },
+		});
+		const rows = [...data.chapterPages.get(chapter.id)!.values()].sort(
+			(x, y) => x.number - y.number,
+		);
+		expect(rows[0]).toMatchObject({ width: 4, height: 6 });
+		// the JPEG fixture is the 4×6 PNG rotated 90° — dimensions must follow
+		const jpegMeta = await dimsOf(JPEG);
+		expect(rows[1]).toMatchObject({
+			width: jpegMeta.width,
+			height: jpegMeta.height,
+		});
+		expect(rows[1].width * rows[1].height).toBe(24);
+
+		const before = storage.size();
+		const err = await errorOf(() =>
+			publishing.ingestChapter(OWNER, {
+				source: {
+					kind: "images",
+					uploads: [
+						upload("good.png", PNG_20X10),
+						upload("broken.png", GARBAGE_PNG),
+					],
+				},
+				target: { kind: "newChapter", comicId: "c1" },
+			}),
+		);
+		expect(err.code).toBe("INVALID_INPUT");
+		expect(err.filename).toBe("broken.png");
+		// nothing from the bad batch reaches storage (invariant 5's unwind)
+		expect(storage.size()).toBe(before);
+		expect(data.chapterPages.size).toBe(1);
 	});
 
 	test("sniff helper agrees with the archive path (WEBP)", () => {

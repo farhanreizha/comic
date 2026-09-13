@@ -4,6 +4,7 @@ import type { SniffedType } from "./images";
 import {
 	assertEachWithinImageLimit,
 	extForType,
+	imageDimensions,
 	naturalCompare,
 	sniffImageType,
 } from "./images";
@@ -245,8 +246,19 @@ export function createPublishing(deps: {
 			try {
 				// Invariant 5: every file before any row. A failed put unwinds
 				// what was written and never reaches the database.
+				// Dimensions decode BEFORE any storage write (decision 8): an
+				// image Bun.Image cannot decode must never reach a Page row —
+				// it would break the reader's layout reservation.
 				const rows: NewPageRow[] = [];
 				for (const [i, p] of pages.entries()) {
+					const dims = await imageDimensions(p.bytes);
+					if (!dims) {
+						throw publishingError(
+							"INVALID_INPUT",
+							"image could not be decoded — the reader cannot lay it out",
+							p.sourceName,
+						);
+					}
 					const number = i + 1;
 					const key = pageKey({
 						comicId: comic.id,
@@ -262,6 +274,8 @@ export function createPublishing(deps: {
 						number,
 						storageKey: key,
 						contentType: p.contentType,
+						width: dims.width,
+						height: dims.height,
 					});
 				}
 

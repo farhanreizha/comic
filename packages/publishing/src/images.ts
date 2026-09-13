@@ -124,3 +124,32 @@ export function assertEachWithinImageLimit(uploads: readonly Upload[]): void {
 		}
 	}
 }
+
+export type Dimensions = { width: number; height: number };
+
+/**
+ * Pixel dimensions from header metadata (social-admin.md decision 8).
+ * `new Bun.Image(bytes).metadata()` is the ONLY working read path on Bun
+ * 1.4.0 — the synchronous `img.width`/`img.height` accessors are the
+ * *output* dimensions and stay -1 until a terminal runs. Undecodable
+ * images return null; the caller must reject them — an image the reader
+ * cannot size would break its layout reservation.
+ */
+export async function imageDimensions(
+	bytes: Uint8Array,
+): Promise<Dimensions | null> {
+	try {
+		const meta = await new Bun.Image(bytes).metadata();
+		if (
+			typeof meta.width !== "number" ||
+			typeof meta.height !== "number" ||
+			meta.width <= 0 ||
+			meta.height <= 0
+		) {
+			return null;
+		}
+		return { width: meta.width, height: meta.height };
+	} catch {
+		return null;
+	}
+}
