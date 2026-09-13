@@ -1,6 +1,7 @@
 <script lang="ts">
-import { orpc } from "$lib/orpc";
 import { createQuery } from "@tanstack/svelte-query";
+import { orpc } from "$lib/orpc";
+
 const healthCheck = createQuery(() => orpc.healthCheck.queryOptions());
 
 const TITLE_TEXT = `
