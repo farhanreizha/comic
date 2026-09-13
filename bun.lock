@@ -88,10 +88,12 @@
     "packages/api": {
       "name": "@comic/api",
       "dependencies": {
+        "@comic/admin": "workspace:*",
         "@comic/auth": "workspace:*",
         "@comic/db": "workspace:*",
         "@comic/publishing": "workspace:*",
         "@comic/reading": "workspace:*",
+        "@comic/social": "workspace:*",
         "@comic/storage": "workspace:*",
         "@orpc/client": "catalog:",
         "@orpc/openapi": "catalog:",

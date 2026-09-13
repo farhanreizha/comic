@@ -13,6 +13,8 @@
 		{ "path": "../auth" },
 		{ "path": "../reading" },
 		{ "path": "../publishing" },
+		{ "path": "../social" },
+		{ "path": "../admin" },
 		{ "path": "../storage" }
 	]
 }
