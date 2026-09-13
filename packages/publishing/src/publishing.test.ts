@@ -555,11 +555,13 @@ describe("publishing — interface tests (docs/design/write-path.md)", () => {
 		expect(rows[0]).toMatchObject({ width: 4, height: 6 });
 		// the JPEG fixture is the 4×6 PNG rotated 90° — dimensions must follow
 		const jpegMeta = await dimsOf(JPEG);
-		expect(rows[1]).toMatchObject({
+		const [pngRow, jpegRow] = rows;
+		expect(pngRow).toMatchObject({ width: 4, height: 6 });
+		expect(jpegRow).toMatchObject({
 			width: jpegMeta.width,
 			height: jpegMeta.height,
 		});
-		expect(rows[1].width * rows[1].height).toBe(24);
+		expect(jpegRow!.width * jpegRow!.height).toBe(24);
 
 		const before = storage.size();
 		const err = await errorOf(() =>
