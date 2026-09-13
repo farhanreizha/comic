@@ -1,0 +1,3 @@
+{
+  "extends": "@comic/config/tsconfig.base.json"
+}

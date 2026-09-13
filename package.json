@@ -1,0 +1,57 @@
+{
+  "name": "comic",
+  "private": true,
+  "workspaces": {
+    "packages": [
+      "apps/*",
+      "packages/*"
+    ],
+    "catalog": {
+      "zod": "^4.5.4",
+      "typescript": "^6.0.3",
+      "@types/bun": "^1.4.2",
+      "varlock": "1.18.0",
+      "@orpc/server": "^1.15.0",
+      "@orpc/openapi": "^1.15.0",
+      "@orpc/zod": "^1.15.0",
+      "better-auth": "1.7.3",
+      "@orpc/client": "^1.15.0"
+    }
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "check-types": "turbo run check-types",
+    "dev:types": "tsc -b packages/api --watch",
+    "dev:web": "turbo run dev -F web --",
+    "dev:server": "turbo run dev -F server --",
+    "db:push": "turbo run db:push -F @comic/db --",
+    "db:studio": "turbo run db:studio -F @comic/db --",
+    "db:generate": "turbo run db:generate -F @comic/db --",
+    "db:migrate": "turbo run db:migrate -F @comic/db --",
+    "db:start": "docker compose up -d postgres",
+    "db:watch": "docker compose up postgres",
+    "db:stop": "docker compose stop postgres",
+    "db:down": "docker compose down postgres",
+    "docker:build": "docker compose build",
+    "docker:up": "docker compose up -d --build",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "env:generate": "varlock codegen --path ./apps/web/ && varlock codegen --path ./apps/server/ && varlock codegen --path ./packages/db/",
+    "postinstall": "varlock codegen --path ./apps/web/ && varlock codegen --path ./apps/server/ && varlock codegen --path ./packages/db/",
+    "check": "biome check --write ."
+  },
+  "dependencies": {
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.12",
+    "@comic/config": "workspace:*",
+    "@types/bun": "catalog:",
+    "turbo": "^2.10.12",
+    "typescript": "catalog:",
+    "varlock": "catalog:"
+  },
+  "packageManager": "bun@1.4.0"
+}

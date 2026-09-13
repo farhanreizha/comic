@@ -1,5 +1,0 @@
-# Runs on every commit once husky is installed (bun add -d husky && bunx husky init).
-bunx lint-staged
-# Add when scaffold provides the scripts:
-# bun run typecheck
-# bun run test
