@@ -4,7 +4,7 @@ import { RPCLink } from "@orpc/client/fetch";
 import { createTanstackQueryUtils } from "@orpc/tanstack-query";
 import { QueryCache, QueryClient } from "@tanstack/svelte-query";
 
-import { ENV as env } from "../env";
+import { ENV } from "../env";
 
 export const queryClient = new QueryClient({
 	queryCache: new QueryCache({
@@ -50,7 +50,7 @@ function getServerUrl(url: string) {
 	return `http://localhost:3000${normalized}`;
 }
 export const link = new RPCLink({
-	url: `${getServerUrl(env.PUBLIC_SERVER_URL)}/rpc`,
+	url: `${getServerUrl(ENV.PUBLIC_SERVER_URL)}/rpc`,
 	fetch(url, options) {
 		return fetch(url, {
 			...options,
