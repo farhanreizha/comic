@@ -1,27 +1,27 @@
 {
-  "name": "@comic/auth",
-  "type": "module",
-  "exports": {
-    ".": {
-      "types": "./dist/src/index.d.ts",
-      "default": "./src/index.ts"
-    },
-    "./*": {
-      "types": "./dist/src/*.d.ts",
-      "default": "./src/*.ts"
-    }
-  },
-  "scripts": {
-    "build": "tsc -b",
-    "check-types": "tsc -b"
-  },
-  "dependencies": {
-    "@comic/db": "workspace:*",
-    "better-auth": "catalog:",
-    "zod": "catalog:"
-  },
-  "devDependencies": {
-    "@comic/config": "workspace:*",
-    "typescript": "catalog:"
-  }
+	"name": "@comic/auth",
+	"type": "module",
+	"exports": {
+		".": {
+			"types": "./dist/src/index.d.ts",
+			"default": "./src/index.ts"
+		},
+		"./*": {
+			"types": "./dist/src/*.d.ts",
+			"default": "./src/*.ts"
+		}
+	},
+	"scripts": {
+		"build": "tsc -b",
+		"check-types": "tsc -b"
+	},
+	"dependencies": {
+		"@comic/db": "workspace:*",
+		"better-auth": "catalog:",
+		"zod": "catalog:"
+	},
+	"devDependencies": {
+		"@comic/config": "workspace:*",
+		"typescript": "catalog:"
+	}
 }

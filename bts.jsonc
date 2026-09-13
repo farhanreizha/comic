@@ -16,7 +16,11 @@
   "backend": "hono",
   "runtime": "bun",
   "frontend": ["svelte"],
-  "addons": ["biome", "turborepo"],
+  "addons": [
+		"biome",
+		"turborepo",
+		"husky"
+	],
   "examples": [],
   "auth": "better-auth",
   "payments": "none",
