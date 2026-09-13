@@ -7,7 +7,7 @@
 import { createPrismaClient } from "@comic/db";
 import { createDiskStorage } from "@comic/storage";
 import { env } from "./src/env.server";
-import app from "./src/index";
+import { app } from "./src/index";
 import { auth } from "./src/services";
 
 const db = createPrismaClient(env);

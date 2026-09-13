@@ -11,9 +11,10 @@ import { logger } from "hono/logger";
 import { createContext } from "./context";
 import { env } from "./env.server";
 import { pagesApp } from "./pages";
+import { MAX_UPLOAD_BYTES, publishingApp } from "./publishing";
 import { auth } from "./services";
 
-const app = new Hono();
+export const app = new Hono();
 
 app.use(logger());
 app.use(
@@ -29,6 +30,7 @@ app.use(
 app.on(["POST", "GET"], "/api/auth/*", async (c) => auth.handler(c.req.raw));
 
 app.route("/", pagesApp);
+app.route("/", publishingApp);
 
 export const apiHandler = new OpenAPIHandler(appRouter, {
 	plugins: [
@@ -79,4 +81,7 @@ app.get("/", (c) => {
 	return c.text("OK");
 });
 
-export default app;
+export default {
+	fetch: app.fetch,
+	maxRequestBodySize: MAX_UPLOAD_BYTES,
+};

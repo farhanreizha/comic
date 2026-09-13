@@ -1,9 +1,9 @@
-import { viewerFromSession } from "@comic/api/routers/reading";
 import { createReading } from "@comic/reading";
 import { createPrismaComicData } from "@comic/reading/adapters/prisma";
 import { createStorageFilesPort } from "@comic/reading/adapters/storage-files";
 import { Hono } from "hono";
 
+import { viewerWithRole } from "./context";
 import { auth, getDb, storage } from "./services";
 
 /**
@@ -14,7 +14,7 @@ export const pagesApp = new Hono();
 
 pagesApp.get("/pages/:id", async (c) => {
 	const session = await auth.api.getSession({ headers: c.req.raw.headers });
-	const viewer = viewerFromSession(session);
+	const viewer = await viewerWithRole(session);
 	const reading = createReading({
 		data: createPrismaComicData(await getDb()),
 		files: createStorageFilesPort(storage),

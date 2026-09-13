@@ -14,6 +14,7 @@
 		"@comic/api": "workspace:*",
 		"@comic/auth": "workspace:*",
 		"@comic/db": "workspace:*",
+		"@comic/publishing": "workspace:*",
 		"@comic/reading": "workspace:*",
 		"@comic/storage": "workspace:*",
 		"@orpc/openapi": "catalog:",
