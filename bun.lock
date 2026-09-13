@@ -72,6 +72,19 @@
         "vite": "^8.2.2",
       },
     },
+    "packages/admin": {
+      "name": "@comic/admin",
+      "dependencies": {
+        "@comic/db": "workspace:*",
+        "@comic/reading": "workspace:*",
+        "@comic/storage": "workspace:*",
+      },
+      "devDependencies": {
+        "@comic/config": "workspace:*",
+        "@types/bun": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
     "packages/api": {
       "name": "@comic/api",
       "dependencies": {
@@ -149,6 +162,18 @@
         "typescript": "catalog:",
       },
     },
+    "packages/social": {
+      "name": "@comic/social",
+      "dependencies": {
+        "@comic/db": "workspace:*",
+        "@comic/reading": "workspace:*",
+      },
+      "devDependencies": {
+        "@comic/config": "workspace:*",
+        "@types/bun": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
     "packages/storage": {
       "name": "@comic/storage",
       "devDependencies": {
@@ -206,6 +231,8 @@
 
     "@biomejs/cli-win32-x64": ["@biomejs/cli-win32-x64@2.5.13", "", { "os": "win32", "cpu": "x64" }, "sha512-VOofU/nW761XWzUeUNE8zzYNyPrxuMuNFMizL0qz7J75yeV8N7WFheUlk1/K6dOkaFpH9wJ+lDKlwjAbw0346w=="],
 
+    "@comic/admin": ["@comic/admin@workspace:packages/admin"],
+
     "@comic/api": ["@comic/api@workspace:packages/api"],
 
     "@comic/auth": ["@comic/auth@workspace:packages/auth"],
@@ -217,6 +244,8 @@
     "@comic/publishing": ["@comic/publishing@workspace:packages/publishing"],
 
     "@comic/reading": ["@comic/reading@workspace:packages/reading"],
+
+    "@comic/social": ["@comic/social@workspace:packages/social"],
 
     "@comic/storage": ["@comic/storage@workspace:packages/storage"],
 

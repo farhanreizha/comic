@@ -1,0 +1,29 @@
+{
+	"name": "@comic/admin",
+	"type": "module",
+	"exports": {
+		".": {
+			"types": "./dist/src/index.d.ts",
+			"default": "./src/index.ts"
+		},
+		"./*": {
+			"types": "./dist/src/*.d.ts",
+			"default": "./src/*.ts"
+		}
+	},
+	"scripts": {
+		"build": "tsc -b",
+		"check-types": "tsc -b",
+		"test": "bun test"
+	},
+	"dependencies": {
+		"@comic/db": "workspace:*",
+		"@comic/reading": "workspace:*",
+		"@comic/storage": "workspace:*"
+	},
+	"devDependencies": {
+		"@comic/config": "workspace:*",
+		"@types/bun": "catalog:",
+		"typescript": "catalog:"
+	}
+}
