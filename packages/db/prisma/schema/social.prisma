@@ -1,0 +1,114 @@
+// Social graph — comments, ratings, follows. Spec: docs/design/social-admin.md.
+
+model Comment {
+  id       String  @id @default(cuid())
+  comicId  String
+  comic    Comic   @relation(fields: [comicId], references: [id], onDelete: Cascade)
+  authorId String
+  author   User    @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  body     String
+  /// Moderation hides, never deletes (decision 3). Absent from listings for
+  /// everyone except admin; excluded from counts.
+  hiddenAt DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([comicId, createdAt])
+  @@map("comment")
+}
+
+model Rating {
+  id      String @id @default(cuid())
+  comicId String
+  comic   Comic  @relation(fields: [comicId], references: [id], onDelete: Cascade)
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// 1..5, enforced in the module, not the database (decision 4).
+  value   Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, comicId])
+  @@index([comicId])
+  @@map("rating")
+}
+
+model Follow {
+  id         String @id @default(cuid())
+  followerId String
+  follower   User   @relation("following", fields: [followerId], references: [id], onDelete: Cascade)
+  creatorId  String
+  creator    User   @relation("followers", fields: [creatorId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([followerId, creatorId])
+  @@index([creatorId])
+  @@map("follow")
+}
+
+enum ReportTarget {
+  comic
+  comment
+}
+
+enum ReportReason {
+  sexual_content
+  copyright
+  harassment
+  spam
+  other
+}
+
+enum ReportStatus {
+  open
+  resolved
+  dismissed
+}
+
+model Report {
+  id         String       @id @default(cuid())
+  targetType ReportTarget
+  /// Comic.id or Comment.id — deliberately unenumerated: reports point at
+  /// content without owning it.
+  targetId   String
+  reporterId String
+  reporter   User         @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  reason     ReportReason
+  note       String?
+  status     ReportStatus @default(open)
+  resolvedAt DateTime?
+  resolvedBy String?
+
+  createdAt DateTime @default(now())
+
+  // One open report per reporter per target (invariant 8). The unique index
+  // spans status, so resolved/dismissed rows of any count may accumulate.
+  @@unique([reporterId, targetType, targetId, status])
+  @@index([status, createdAt])
+  @@map("report")
+}
+
+enum ApplicationStatus {
+  pending
+  approved
+  rejected
+}
+
+model CreatorApplication {
+  id           String            @id @default(cuid())
+  userId       String
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  motivation   String
+  portfolioUrl String?
+  /// Storage key, written through packages/storage — never a path (invariant 13).
+  sampleKey    String?
+  status       ApplicationStatus @default(pending)
+  decidedAt    DateTime?
+  decidedBy    String?
+
+  createdAt DateTime @default(now())
+
+  @@index([status, createdAt])
+  @@map("creator_application")
+}

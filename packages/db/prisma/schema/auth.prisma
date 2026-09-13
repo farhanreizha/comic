@@ -12,6 +12,12 @@ model User {
   comics        Comic[]
   progress      Progress[]
   savedComics   SavedComic[]
+  comments      Comment[]
+  ratings       Rating[]
+  following     Follow[]        @relation("following")
+  followers     Follow[]        @relation("followers")
+  reports       Report[]
+  applications  CreatorApplication[]
 
   @@unique([email])
   @@map("user")
