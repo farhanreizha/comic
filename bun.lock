@@ -24,6 +24,8 @@
         "@comic/api": "workspace:*",
         "@comic/auth": "workspace:*",
         "@comic/db": "workspace:*",
+        "@comic/reading": "workspace:*",
+        "@comic/storage": "workspace:*",
         "@orpc/openapi": "catalog:",
         "@orpc/server": "catalog:",
         "@orpc/zod": "catalog:",
@@ -74,6 +76,8 @@
       "dependencies": {
         "@comic/auth": "workspace:*",
         "@comic/db": "workspace:*",
+        "@comic/reading": "workspace:*",
+        "@comic/storage": "workspace:*",
         "@orpc/client": "catalog:",
         "@orpc/openapi": "catalog:",
         "@orpc/server": "catalog:",
@@ -115,6 +119,26 @@
         "prisma": "^7.10.0",
         "typescript": "catalog:",
         "varlock": "catalog:",
+      },
+    },
+    "packages/reading": {
+      "name": "@comic/reading",
+      "dependencies": {
+        "@comic/db": "workspace:*",
+        "@comic/storage": "workspace:*",
+      },
+      "devDependencies": {
+        "@comic/config": "workspace:*",
+        "@types/bun": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
+    "packages/storage": {
+      "name": "@comic/storage",
+      "devDependencies": {
+        "@comic/config": "workspace:*",
+        "@types/bun": "catalog:",
+        "typescript": "catalog:",
       },
     },
   },
@@ -173,6 +197,10 @@
     "@comic/config": ["@comic/config@workspace:packages/config"],
 
     "@comic/db": ["@comic/db@workspace:packages/db"],
+
+    "@comic/reading": ["@comic/reading@workspace:packages/reading"],
+
+    "@comic/storage": ["@comic/storage@workspace:packages/storage"],
 
     "@electric-sql/pglite": ["@electric-sql/pglite@0.4.3", "", {}, "sha512-ichuWTgtd4mOM1G4SpyGJa5trT03lWbMypDV0fUXUCXg5hiHqVAz/bZyV68NqmkLB7WcYmj1RMJVSp8HV/v/ZQ=="],
 
