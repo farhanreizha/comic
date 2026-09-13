@@ -19,6 +19,7 @@ const comicSelect = {
 	genres: true,
 	visibility: true,
 	status: true,
+	takenDownAt: true,
 	updatedAt: true,
 	owner: { select: { id: true, name: true } },
 	_count: { select: { chapters: true } },
@@ -33,6 +34,7 @@ type ComicRow = {
 	genres: string[];
 	visibility: string;
 	status: string;
+	takenDownAt: Date | null;
 	updatedAt: Date;
 	owner: { id: string; name: string };
 	_count: { chapters: number };
@@ -61,6 +63,7 @@ function toComicRecord(row: ComicRow): ComicRecord {
 		chapterCount: row._count.chapters,
 		visibility: row.visibility as ComicRecord["visibility"],
 		status: row.status as ComicRecord["status"],
+		takenDownAt: row.takenDownAt,
 		updatedAt: row.updatedAt,
 	};
 }

@@ -16,6 +16,7 @@ type ComicOpts = {
 	ownerId?: string;
 	ownerName?: string;
 	updatedAt?: Date;
+	takenDownAt?: Date | null;
 };
 
 function comic(id: string, opts: ComicOpts = {}): ComicRecord {
@@ -31,6 +32,7 @@ function comic(id: string, opts: ComicOpts = {}): ComicRecord {
 		chapterCount: 0,
 		visibility: opts.visibility ?? "public",
 		status: opts.status ?? "published",
+		takenDownAt: opts.takenDownAt ?? null,
 		updatedAt: opts.updatedAt ?? new Date("2026-01-01T00:00:00Z"),
 	};
 }
@@ -498,6 +500,89 @@ describe("reading — interface tests (docs/design/reading-path.md)", () => {
 			expect(p?.page).toBe(3);
 			expect((await data.getProgress("u-owner", "ch-prog"))?.page).toBe(1);
 			expect((await data.getProgress("u-admin", "ch-prog"))?.page).toBe(2);
+		});
+	});
+
+	// 7. Takedown (social-admin.md invariant 3): invisible to everyone but
+	// admin — including the owner — through the single canView decision.
+	describe("7. taken-down comic", () => {
+		test("browse, read, page bytes and shelf deny owner+reader+anon; admin still sees it", async () => {
+			const { data, storage, reading } = makeReading();
+			const down = comic("c-down", {
+				visibility: "public",
+				status: "published",
+				takenDownAt: new Date("2026-02-01T00:00:00Z"),
+			});
+			data.seed.comics.push(down);
+			data.seed.chapters.push({
+				id: "ch-down",
+				comicId: "c-down",
+				ordinal: 1,
+				title: "Ch",
+				pageCount: 1,
+			});
+			data.seed.pages.push({
+				id: "pg-down",
+				chapterId: "ch-down",
+				number: 1,
+				storageKey: "down/1.jpg",
+				contentType: "image/jpeg",
+			});
+			await storage.put("down/1.jpg", {
+				bytes: new Uint8Array([5]),
+				contentType: "image/jpeg",
+			});
+			data.seed.saved.push({ userId: "u-owner", comicId: "c-down" });
+
+			expect(canView(OWNER, down)).toBe(false);
+			expect(canView(READER, down)).toBe(false);
+			expect(canView(ANONYMOUS, down)).toBe(false);
+			expect(canView(ADMIN, down)).toBe(true);
+
+			for (const viewer of [ANONYMOUS, READER, OWNER]) {
+				const browse = await reading.browse(viewer, { limit: 100 });
+				expect(browse.items.map((i) => i.id)).not.toContain("c-down");
+				expect(
+					await errorOf(() =>
+						reading.read(viewer, { kind: "comic", ref: { id: "c-down" } }),
+					),
+				).toBe("NOT_FOUND");
+				expect(
+					await errorOf(() =>
+						reading.read(viewer, { kind: "page", pageId: "pg-down" }),
+					),
+				).toBe("NOT_FOUND");
+			}
+			// even the owner's shelf drops it
+			const shelf = await reading.shelf(OWNER);
+			expect(shelf.saved.map((c) => c.id)).not.toContain("c-down");
+
+			// admin path still works — the takedown is visible, not vanished
+			const asAdmin = await reading.read(ADMIN, {
+				kind: "comic",
+				ref: { id: "c-down" },
+			});
+			expect(asAdmin.kind).toBe("comic");
+			expect(
+				await reading.read(ADMIN, { kind: "page", pageId: "pg-down" }),
+			).toMatchObject({ kind: "page" });
+		});
+
+		test("untakedown (takenDownAt cleared) restores access", async () => {
+			const { data, reading } = makeReading();
+			const down = comic("c-restored", { takenDownAt: new Date() });
+			data.seed.comics.push(down);
+			expect(
+				await errorOf(() =>
+					reading.read(READER, { kind: "comic", ref: { id: "c-restored" } }),
+				),
+			).toBe("NOT_FOUND");
+			down.takenDownAt = null;
+			const ok = await reading.read(READER, {
+				kind: "comic",
+				ref: { id: "c-restored" },
+			});
+			expect(ok.kind).toBe("comic");
 		});
 	});
 });

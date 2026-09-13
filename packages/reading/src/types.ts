@@ -111,6 +111,8 @@ export type ComicRecord = {
 	chapterCount: number;
 	visibility: Visibility;
 	status: ComicStatus;
+	/** Non-null = taken down; canView denies everyone but admin. */
+	takenDownAt: Date | null;
 	updatedAt: Date;
 };
 

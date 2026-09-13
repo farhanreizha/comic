@@ -17,15 +17,23 @@ import type {
  * | unlisted   | published | read by ref   | read   | read  | read  |
  * | unlisted   | draft     | —             | —      | read  | read  |
  * | private    | *         | —             | —      | read  | read  |
+ *
+ * Takedown overrides all of it (social-admin.md invariant 3): a taken-down
+ * comic fails for everyone except admin — including its owner. The one and
+ * only home of that rule.
  */
 export function canView(viewer: Viewer, comic: ComicRecord): boolean {
 	if (
 		viewer.kind === "user" &&
 		(viewer.role === "admin" || viewer.id === comic.creatorId)
 	) {
-		return true;
+		return comic.takenDownAt === null || viewer.role === "admin";
 	}
-	return comic.status === "published" && comic.visibility !== "private";
+	return (
+		comic.takenDownAt === null &&
+		comic.status === "published" &&
+		comic.visibility !== "private"
+	);
 }
 
 /**
