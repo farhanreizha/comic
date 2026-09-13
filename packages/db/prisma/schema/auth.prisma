@@ -4,10 +4,14 @@ model User {
   email         String
   emailVerified Boolean   @default(false)
   image         String?
+  role          Role      @default(reader)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   sessions      Session[]
   accounts      Account[]
+  comics        Comic[]
+  progress      Progress[]
+  savedComics   SavedComic[]
 
   @@unique([email])
   @@map("user")

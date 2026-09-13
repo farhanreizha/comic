@@ -1,0 +1,117 @@
+enum Role {
+  reader
+  creator
+  admin
+}
+
+enum Visibility {
+  public
+  unlisted
+  private
+}
+
+enum ComicStatus {
+  draft
+  published
+}
+
+// Names are the code-level genre values; `reading` maps sci_fi/slice_of_life
+// to the "sci-fi" / "slice-of-life" strings used at the interface.
+enum Genre {
+  action
+  adventure
+  comedy
+  drama
+  fantasy
+  horror
+  mystery
+  romance
+  sci_fi
+  slice_of_life
+  sports
+  thriller
+}
+
+model Comic {
+  id         String      @id @default(cuid())
+  slug       String      @unique
+  title      String
+  synopsis   String?
+  /// Public path to the cover image; file bytes live in the `storage` module.
+  coverUrl   String?
+  genres     Genre[]
+  visibility Visibility  @default(public)
+  status     ComicStatus @default(draft)
+  ownerId    String
+  owner      User        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  chapters   Chapter[]
+  savedBy    SavedComic[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([visibility, status, updatedAt])
+  @@index([ownerId])
+  @@map("comic")
+}
+
+model Chapter {
+  id      String @id @default(cuid())
+  comicId String
+  comic   Comic  @relation(fields: [comicId], references: [id], onDelete: Cascade)
+  /// 1-based order within the comic.
+  ordinal Int
+  title   String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  pages    Page[]
+  progress Progress[]
+
+  @@unique([comicId, ordinal])
+  @@map("chapter")
+}
+
+model Page {
+  id         String  @id @default(cuid())
+  chapterId  String
+  chapter    Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  /// 1-based order within the chapter.
+  number     Int
+  /// Key inside the `storage` module — never a filesystem path outside it.
+  storageKey String  @unique
+  contentType String
+
+  createdAt DateTime @default(now())
+
+  @@unique([chapterId, number])
+  @@map("page")
+}
+
+model Progress {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chapterId String
+  chapter   Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  page      Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, chapterId])
+  @@index([userId, updatedAt])
+  @@map("progress")
+}
+
+model SavedComic {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comicId   String
+  comic     Comic    @relation(fields: [comicId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, comicId])
+  @@map("saved_comic")
+}
