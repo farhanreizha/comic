@@ -7,6 +7,8 @@ export type StorageAdapter = {
 	put(key: string, value: StoredFile): Promise<void>;
 	get(key: string): Promise<StoredFile | null>;
 	delete(key: string): Promise<void>;
+	/** Sorted keys of every stored object under `prefix` (`""` = all). */
+	list(prefix: string): Promise<string[]>;
 };
 
 const assertSafeKey = (key: string): void => {
@@ -19,6 +21,18 @@ const assertSafeKey = (key: string): void => {
 			.some((segment) => segment === ".." || segment === "." || segment === "")
 	) {
 		throw new Error(`invalid storage key: ${key}`);
+	}
+};
+
+/** Prefixes are only ever used as filters — `..` segments are rejected so a
+ * sweep can never look outside its root even if a future adapter resolves them. */
+const assertSafePrefix = (prefix: string): void => {
+	if (
+		prefix.startsWith("/") ||
+		prefix.includes("\\") ||
+		prefix.split("/").some((segment) => segment === "..")
+	) {
+		throw new Error(`invalid storage prefix: ${prefix}`);
 	}
 };
 
@@ -68,6 +82,30 @@ export function createDiskStorage(rootDir: string): StorageAdapter {
 			await rm(target, { force: true });
 			await rm(`${target}.meta.json`, { force: true });
 		},
+		async list(prefix) {
+			assertSafePrefix(prefix);
+			const { readdir } = await import("node:fs/promises");
+			const path = await import("node:path");
+			const walk = async (dir: string): Promise<string[]> => {
+				const out: string[] = [];
+				for (const entry of await readdir(dir, { withFileTypes: true })) {
+					const full = path.join(dir, entry.name);
+					if (entry.isDirectory()) out.push(...(await walk(full)));
+					else if (entry.isFile() && !entry.name.endsWith(".meta.json"))
+						out.push(path.relative(rootDir, full));
+				}
+				return out;
+			};
+			const keys = await walk(rootDir).catch((error) => {
+				if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+				throw error;
+			});
+			// Normalise platform separators to storage-key form.
+			return keys
+				.map((k) => k.split(path.sep).join("/"))
+				.filter((k) => k.startsWith(prefix))
+				.sort();
+		},
 	};
 }
 
@@ -95,6 +133,10 @@ export function createMemoryStorage(): StorageAdapter & {
 		async delete(key) {
 			assertSafeKey(key);
 			files.delete(key);
+		},
+		async list(prefix) {
+			assertSafePrefix(prefix);
+			return [...files.keys()].filter((k) => k.startsWith(prefix)).sort();
 		},
 		clear() {
 			files.clear();
