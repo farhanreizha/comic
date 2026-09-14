@@ -52,6 +52,9 @@ export type ChapterSummary = {
 export type PageSummary = {
 	id: string;
 	number: number;
+	/** Pixels, stored at ingest — the reader reserves layout from these. */
+	width: number;
+	height: number;
 };
 
 export type BrowseQuery = {
@@ -130,6 +133,8 @@ export type PageRecord = {
 	number: number;
 	storageKey: string;
 	contentType: string;
+	width: number;
+	height: number;
 };
 
 export type ProgressRecord = {

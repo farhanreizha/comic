@@ -89,6 +89,8 @@ const pageSelect = {
 	number: true,
 	storageKey: true,
 	contentType: true,
+	width: true,
+	height: true,
 } as const;
 
 const chapterSelect = {

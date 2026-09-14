@@ -4,6 +4,7 @@ import type {
 	ComicCard,
 	ComicRecord,
 	PageRecord,
+	PageSummary,
 	Viewer,
 	VisibilityScope,
 } from "./types";
@@ -82,9 +83,11 @@ export function toSummary(chapter: ChapterRecord): ChapterSummary {
 	};
 }
 
-export function toPageSummary(page: PageRecord): {
-	id: string;
-	number: number;
-} {
-	return { id: page.id, number: page.number };
+export function toPageSummary(page: PageRecord): PageSummary {
+	return {
+		id: page.id,
+		number: page.number,
+		width: page.width,
+		height: page.height,
+	};
 }

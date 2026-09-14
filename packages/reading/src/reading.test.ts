@@ -100,6 +100,8 @@ function seedParity(data: ReturnType<typeof createMemoryComicData>) {
 			number: 1,
 			storageKey: `${c.id}/1.jpg`,
 			contentType: "image/jpeg",
+			width: 800,
+			height: 1200,
 		});
 	}
 	return combos;
@@ -212,6 +214,8 @@ describe("reading — interface tests (docs/design/reading-path.md)", () => {
 				number: 1,
 				storageKey: "secret/1.png",
 				contentType: "image/png",
+				width: 800,
+				height: 1200,
 			});
 			await storage.put("secret/1.png", {
 				bytes: new Uint8Array([9]),
@@ -301,6 +305,8 @@ describe("reading — interface tests (docs/design/reading-path.md)", () => {
 				number: 1,
 				storageKey: "p/1.jpg",
 				contentType: "image/jpeg",
+				width: 800,
+				height: 1200,
 			});
 			await storage.put("p/1.jpg", {
 				bytes: new Uint8Array([0xff, 0xd8]),
@@ -402,6 +408,8 @@ describe("reading — interface tests (docs/design/reading-path.md)", () => {
 						number: 1,
 						storageKey: `${ch}/1.jpg`,
 						contentType: "image/jpeg",
+						width: 700,
+						height: 1000,
 					},
 					{
 						id: `${ch}-p2`,
@@ -409,6 +417,8 @@ describe("reading — interface tests (docs/design/reading-path.md)", () => {
 						number: 2,
 						storageKey: `${ch}/2.jpg`,
 						contentType: "image/jpeg",
+						width: 700,
+						height: 1000,
 					},
 				);
 			}
@@ -476,6 +486,8 @@ describe("reading — interface tests (docs/design/reading-path.md)", () => {
 						number: n,
 						storageKey: `${ch}/${n}.jpg`,
 						contentType: "image/jpeg",
+						width: 700,
+						height: 1000,
 					});
 				}
 			}
@@ -503,6 +515,41 @@ describe("reading — interface tests (docs/design/reading-path.md)", () => {
 		});
 	});
 
+	// PageSummary carries the stored dimensions so the reader can reserve layout.
+	describe("6b. chapter read returns page dimensions", () => {
+		test("PageSummary includes width and height", async () => {
+			const { data, reading } = makeReading();
+			data.seed.comics.push(
+				comic("c-dims", { visibility: "public", status: "published" }),
+			);
+			data.seed.chapters.push({
+				id: "ch-dims",
+				comicId: "c-dims",
+				ordinal: 1,
+				title: "Ch",
+				pageCount: 1,
+			});
+			data.seed.pages.push({
+				id: "pg-dims",
+				chapterId: "ch-dims",
+				number: 1,
+				storageKey: "dims/1.jpg",
+				contentType: "image/jpeg",
+				width: 900,
+				height: 1350,
+			});
+			const result = await reading.read(ANONYMOUS, {
+				kind: "chapter",
+				chapterId: "ch-dims",
+			});
+			expect(result.kind).toBe("chapter");
+			if (result.kind !== "chapter") return;
+			expect(result.pages).toEqual([
+				{ id: "pg-dims", number: 1, width: 900, height: 1350 },
+			]);
+		});
+	});
+
 	// 7. Takedown (social-admin.md invariant 3): invisible to everyone but
 	// admin — including the owner — through the single canView decision.
 	describe("7. taken-down comic", () => {
@@ -527,6 +574,8 @@ describe("reading — interface tests (docs/design/reading-path.md)", () => {
 				number: 1,
 				storageKey: "down/1.jpg",
 				contentType: "image/jpeg",
+				width: 800,
+				height: 1200,
 			});
 			await storage.put("down/1.jpg", {
 				bytes: new Uint8Array([5]),
