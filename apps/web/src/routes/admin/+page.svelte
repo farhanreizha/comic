@@ -10,13 +10,20 @@
 	let decisions = $state<Record<string, DecisionState>>({});
 	let decisionBusy = $state<string | null>(null);
 
+	// `data` is a plain prop object — mutating `data.applications` never
+	// triggers a re-render. Hide decided rows via derived state instead.
+	let hiddenAppIds = $state<Set<string>>(new Set());
+	let hiddenReportIds = $state<Set<string>>(new Set());
+	const applications = $derived((data.applications ?? []).filter((a) => !hiddenAppIds.has(a.id)));
+	const reports = $derived((data.reports ?? []).filter((r) => !hiddenReportIds.has(r.id)));
+
 	async function decide(id: string, decision: "approve" | "reject") {
 		if (decisionBusy) return;
 		decisionBusy = id;
 		try {
 			await client.admin.decideApplication({ id, decision });
 			decisions[id] = decision === "approve" ? "approved" : "rejected";
-			data.applications = (data.applications ?? []).filter((a) => a.id !== id);
+			hiddenAppIds = new Set([...hiddenAppIds, id]);
 		} catch (error) {
 			const code = (error as { code?: string }).code;
 			decisions[id] = code === "CONFLICT" ? "already" : "failed";
@@ -35,7 +42,7 @@
 		try {
 			await client.admin.resolveReport({ id, action });
 			resolves[id] = "done";
-			data.reports = (data.reports ?? []).filter((r) => r.id !== id);
+			hiddenReportIds = new Set([...hiddenReportIds, id]);
 		} catch (error) {
 			const code = (error as { code?: string }).code;
 			resolves[id] = code === "CONFLICT" ? "already" : "failed";
@@ -99,11 +106,11 @@
 			<h2 class="eyebrow">{m.admin_apps_heading()}</h2>
 			{#if !data.applications}
 				<p class="mt-2 text-sm text-accent">{m.admin_load_failed()}</p>
-			{:else if data.applications.length === 0}
+			{:else if applications.length === 0}
 				<p class="mt-2 text-sm text-text-2">{m.admin_apps_empty()}</p>
 			{:else}
 				<ul class="mt-3 space-y-4">
-					{#each data.applications as a (a.id)}
+					{#each applications as a (a.id)}
 						<li class="border border-line bg-bg p-4 text-sm">
 							<p class="font-semibold text-ink">{a.applicant.name}</p>
 							<p class="mt-1 whitespace-pre-line text-ink">{a.motivation}</p>
@@ -156,11 +163,11 @@
 			<h2 class="eyebrow">{m.admin_reports_heading()}</h2>
 			{#if !data.reports}
 				<p class="mt-2 text-sm text-accent">{m.admin_load_failed()}</p>
-			{:else if data.reports.length === 0}
+			{:else if reports.length === 0}
 				<p class="mt-2 text-sm text-text-2">{m.admin_reports_empty()}</p>
 			{:else}
 				<ul class="mt-3 space-y-4">
-					{#each data.reports as r (r.id)}
+					{#each reports as r (r.id)}
 						<li class="border border-line bg-bg p-4 text-sm">
 							<p class="font-semibold text-ink">
 								{r.targetType} · {REPORT_REASONS[r.reason]?.() ?? r.reason}
