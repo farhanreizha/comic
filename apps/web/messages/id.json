@@ -121,7 +121,7 @@
 	"upload_select_comic": "Pilih komik",
 	"upload_no_comics": "Belum ada komik. Buat satu dulu di langkah 1.",
 	"upload_chapter_title": "Judul bab (opsional)",
-	"upload_drop_zone": "Seret CBZ/ZIP ke sini, atau pilih file",
+	"upload_drop_zone": "Seret CBZ/ZIP/PDF ke sini, atau pilih file",
 	"upload_or_images": "…atau pilih banyak file gambar",
 	"upload_files_too_big": "Total file {size} — batas {limit}. Perkecil dulu sebelum kirim.",
 	"upload_progress": "Mengunggah… {pct}%",

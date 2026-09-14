@@ -20,7 +20,9 @@
 		"@comic/db": "workspace:*",
 		"@comic/reading": "workspace:*",
 		"@comic/storage": "workspace:*",
-		"fflate": "^0.8.3"
+		"@napi-rs/canvas": "^1.0.9",
+		"fflate": "^0.8.3",
+		"pdfjs-dist": "^5.7.284"
 	},
 	"devDependencies": {
 		"@comic/config": "workspace:*",

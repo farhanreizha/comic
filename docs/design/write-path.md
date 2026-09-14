@@ -26,6 +26,7 @@ export type ComicDraft = {
 
 export type ChapterSource =
   | { kind: "archive"; upload: Upload }            // CBZ / ZIP
+  | { kind: "pdf"; upload: Upload }                // pages render to PNG at ingest (decision #19)
   | { kind: "images"; uploads: readonly Upload[] } // loose page images
 
 export type ChapterTarget =
@@ -88,7 +89,7 @@ export type ChapterFilesPort = {
 - **No archive port.** The archive reader is an internal seam: one dependency (`fflate`), one implementation. A decoder registry with one decoder is indirection, not a seam. It becomes a port the day a second real format (CBR) has a caller.
 - **`storage` gains `list`.** `put`/`delete` served the write path; `list(prefix)` arrived with the orphan sweep (invariant 7), implemented in both the disk and memory adapters. An S3/R2 adapter adds it as a `ListObjectsV2` call with no interface change.
 
-One dependency: `fflate` for ZIP. Verified 2026-09-13: `Bun.Archive` reads TAR only — feeding it a ZIP throws `Unrecognized archive format` — and there is no ZIP support in `Bun` 1.4.0 or Node 24 stdlib. The alternative is a hand-written central-directory parser (~150 lines of fiddly code across stored/deflate, data descriptors, CRC), which buys nothing over a zero-dependency 30 KB library.
+Dependencies: `fflate` for ZIP. Verified 2026-09-13: `Bun.Archive` reads TAR only — feeding it a ZIP throws `Unrecognized archive format` — and there is no ZIP support in `Bun` 1.4.0 or Node 24 stdlib. The alternative is a hand-written central-directory parser (~150 lines of fiddly code across stored/deflate, data descriptors, CRC), which buys nothing over a zero-dependency 30 KB library. PDF (decision #19) adds `pdfjs-dist` (Apache-2.0) + `@napi-rs/canvas` (MIT, native prebuilt — gnu and musl linux-x64 both verified on `oven/bun:1`): a second internal seam (`src/pdf.ts`), still not a port — the renderer is injectable via `createPublishing({ renderPdf })`, pages arrive as PNG in document order, encrypted/truncated PDFs are `INVALID_INPUT`. AGPL `mupdf` was rejected on license.
 
 ## First tests (before the implementation, both ports in-memory)
 
@@ -106,7 +107,7 @@ One dependency: `fflate` for ZIP. Verified 2026-09-13: `Bun.Archive` reads TAR o
 ## Rejected, and why
 
 - **A third entry point (`replaceChapter`) and a fourth (`arrangePages`)** — replace is folded into `ingestChapter`'s `target` union at no interface cost; reorder/append has no caller today.
-- **`ArchiveDecoder` registry** — one implementation. Add it when CBR or PDF arrives.
+- **`ArchiveDecoder` registry** — one implementation per seam (fflate for ZIP, pdf.js for PDF). Add it when a third container format (CBR) has a caller.
 - **An upload-claim table (`claimUpload` / `markUploadFailed` / `reapOrphans`)** — the failure-first design's answer to orphans is genuinely better at scale, and it is the right upgrade path. For one host with local disk it costs a table, a state machine, and a sweeper to clean up something no reader can reach. Invariant 7 records the ceiling instead of pretending it does not exist.
 - **Streaming extraction** — storage is whole-buffer today and the largest object is 5 MB; the source archive is the only large object. When any single stored artifact can exceed memory, add `putStream(key, { body, contentType, contentLength })` to `StorageAdapter` and stream through it; nothing else in this interface moves.
 - **`updateComic` / comic metadata edits** — separate write path with its own authorisation question; not needed for uploads to work.
