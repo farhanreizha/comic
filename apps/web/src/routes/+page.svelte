@@ -1,62 +1,73 @@
 <script lang="ts">
-	import { createInfiniteQuery } from "@tanstack/svelte-query";
-	import { browser } from "$app/environment";
-	import { goto } from "$app/navigation";
-	import { page } from "$app/state";
-	import { orpc } from "$lib/orpc";
-	import { GENRES, genreLabel, type Genre } from "$lib/genres";
-	import { m } from "$paraglide/messages.js";
-	import ComicCard from "$components/ComicCard.svelte";
+import { createInfiniteQuery } from "@tanstack/svelte-query";
+import { browser } from "$app/environment";
+import { goto } from "$app/navigation";
+import { page } from "$app/state";
+import ComicCard from "$components/ComicCard.svelte";
+import { GENRES, type Genre, genreLabel } from "$lib/genres";
+import { orpc } from "$lib/orpc";
+import { m } from "$paraglide/messages.js";
 
-	const q = $derived(page.url.searchParams.get("q") ?? "");
-	const genre = $derived(
-		(page.url.searchParams.get("genre") ?? "") as Genre | "",
-	);
+// Server load fetched page 1 for the current URL (q/genre/cursor). The
+// infinite query seeds from it and only "load more" runs client-side.
+let { data } = $props();
 
-	const browse = createInfiniteQuery(() =>
-		orpc.reading.browse.infiniteOptions({
-			input: (cursor: string | undefined) => ({
-				q: q || undefined,
-				genre: genre || undefined,
-				cursor,
-				limit: 20,
-			}),
-			initialPageParam: undefined as string | undefined,
-			getNextPageParam: (last) => last.nextCursor ?? undefined,
+const q = $derived(page.url.searchParams.get("q") ?? "");
+const genre = $derived(
+	(page.url.searchParams.get("genre") ?? "") as Genre | "",
+);
+const cursor = $derived(page.url.searchParams.get("cursor") ?? undefined);
+
+const browse = createInfiniteQuery(() =>
+	orpc.reading.browse.infiniteOptions({
+		input: (nextCursor: string | undefined) => ({
+			q: q || undefined,
+			genre: genre || undefined,
+			cursor: nextCursor,
+			limit: 20,
 		}),
-	);
+		initialPageParam: cursor,
+		getNextPageParam: (last: typeof data) => last.nextCursor ?? undefined,
+		initialData: () => ({
+			pages: [data],
+			pageParams: [cursor] as (string | undefined)[],
+		}),
+	}),
+);
 
-	const items = $derived(
-		(browse.data?.pages ?? []).flatMap((p) => p.items as CardLike[]),
-	);
-	type CardLike = import("$components/ComicCard.svelte").CardComic;
+const items = $derived(
+	(browse.data?.pages ?? []).flatMap((p) => p.items as CardLike[]),
+);
+type CardLike = import("$components/ComicCard.svelte").CardComic;
 
-	let searchBox = $state("");
-	$effect(() => {
-		searchBox = q;
-	});
+let searchBox = $state("");
+$effect(() => {
+	searchBox = q;
+});
 
-	function submitSearch(event: SubmitEvent) {
-		event.preventDefault();
-		const params = new URLSearchParams(page.url.searchParams);
-		if (searchBox.trim()) params.set("q", searchBox.trim());
-		else params.delete("q");
-		void goto(`/?${params}`);
+function submitSearch(event: SubmitEvent) {
+	event.preventDefault();
+	const params = new URLSearchParams(page.url.searchParams);
+	if (searchBox.trim()) params.set("q", searchBox.trim());
+	else params.delete("q");
+	params.delete("cursor");
+	void goto(`/?${params}`);
+}
+
+function pickGenre(event: Event) {
+	const value = (event.target as HTMLSelectElement).value;
+	const params = new URLSearchParams(page.url.searchParams);
+	if (value) params.set("genre", value);
+	else params.delete("genre");
+	params.delete("cursor");
+	void goto(`/?${params}`);
+}
+
+$effect(() => {
+	if (browser && page.url.searchParams.get("focus") === "search") {
+		document.getElementById("browse-search")?.focus();
 	}
-
-	function pickGenre(event: Event) {
-		const value = (event.target as HTMLSelectElement).value;
-		const params = new URLSearchParams(page.url.searchParams);
-		if (value) params.set("genre", value);
-		else params.delete("genre");
-		void goto(`/?${params}`);
-	}
-
-	$effect(() => {
-		if (browser && page.url.searchParams.get("focus") === "search") {
-			document.getElementById("browse-search")?.focus();
-		}
-	});
+});
 </script>
 
 <svelte:head>
@@ -89,13 +100,7 @@
 		</select>
 	</div>
 
-	{#if browse.isPending}
-		<div class="grid grid-cols-2 gap-4 py-8 sm:grid-cols-4 sm:gap-6">
-			{#each Array(8) as _, i}
-				<div class="aspect-2/3 animate-pulse border border-line bg-surface/40"></div>
-			{/each}
-		</div>
-	{:else if items.length === 0}
+	{#if items.length === 0}
 		<p class="py-16 text-center text-text-2">{m.browse_empty()}</p>
 	{:else}
 		<div class="grid grid-cols-2 gap-4 py-8 sm:grid-cols-4 sm:gap-6">
