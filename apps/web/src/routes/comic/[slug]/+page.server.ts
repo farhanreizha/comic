@@ -25,6 +25,12 @@ export const load: PageServerLoad = async ({ params, cookies }) => {
 
 	const me = await client.reading.me().catch(() => null);
 	const signedIn = Boolean(me?.signedIn);
+	// Owner affordance: admins and the comic's creator get the chapter entry
+	// point (read already passed canView, so this viewer may see the comic).
+	const canManage =
+		me?.signedIn === true &&
+		(me.role === "admin" ||
+			(me.id !== null && me.id === read.comic.creator.id));
 
 	// Ruling 2026-09-14: comment reads are public. The list renders for
 	// anonymous too — only the write-side state (rating) stays signed-in.
@@ -52,6 +58,7 @@ export const load: PageServerLoad = async ({ params, cookies }) => {
 		synopsis: read.synopsis,
 		chapters: read.chapters,
 		signedIn,
+		canManage,
 		rating,
 		comments,
 		saved,

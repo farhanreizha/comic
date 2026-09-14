@@ -310,7 +310,18 @@ const firstChapter = $derived(chapters[0] ?? null);
 	</div>
 
 	<section class="mt-10">
-		<h2 class="eyebrow">{m.detail_chapters()}</h2>
+		<div class="flex items-baseline justify-between gap-4">
+			<h2 class="eyebrow">{m.detail_chapters()}</h2>
+			{#if data.canManage}
+				<!-- Owner/admin entry point into the upload flow's step 2 -->
+				<a
+					href="/upload?comic={detail.id}"
+					class="text-sm font-semibold text-accent hover:underline"
+				>
+					{m.detail_add_chapter()}
+				</a>
+			{/if}
+		</div>
 		{#if chapters.length === 0}
 			<p class="mt-2 text-sm text-text-2">{m.detail_no_chapters()}</p>
 		{:else}
