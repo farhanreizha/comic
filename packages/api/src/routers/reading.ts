@@ -97,4 +97,24 @@ export const readingRouter = {
 			}).shelf(context.viewer),
 		),
 	),
+	recordProgress: o
+		.input(
+			z.object({
+				chapterId: z.string().min(1),
+				page: z.number().int().min(1),
+			}),
+		)
+		.handler(({ context, input }) =>
+			crossSeam(() =>
+				createReading({
+					data: createPrismaComicData(context.db),
+					files: createStorageFilesPort(context.storage),
+				}).recordProgress(context.viewer, input.chapterId, input.page),
+			),
+		),
+	/** The shell needs the viewer's role to gate nav items; sessions don't carry it. */
+	me: o.handler(({ context }) => ({
+		signedIn: context.viewer.kind === "user",
+		role: context.viewer.kind === "user" ? context.viewer.role : null,
+	})),
 };

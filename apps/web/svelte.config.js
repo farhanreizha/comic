@@ -10,6 +10,10 @@ const config = {
 	kit: {
 		// adapter-node builds a standalone Node server (run with `node build/index.js`).
 		adapter: adapter(),
+		alias: {
+			$paraglide: "src/paraglide",
+			$components: "src/components",
+		},
 	},
 };
 

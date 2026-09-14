@@ -1,5 +1,63 @@
 @import "tailwindcss";
 
-body {
-	@apply bg-neutral-950 text-neutral-100;
+/* Tokens from docs/design/visual-language.md — exact hex, measured contrast.
+   Never re-derive. #A4A09E is decoration only, never text on cream (2.39:1). */
+@font-face {
+	font-family: "Fraunces";
+	src: url("/fonts/fraunces-latin-wght-normal.woff2") format("woff2-variations");
+	font-weight: 400 700;
+	font-style: normal;
+	font-display: swap;
+}
+@font-face {
+	font-family: "Manrope";
+	src: url("/fonts/manrope-latin-wght-normal.woff2") format("woff2-variations");
+	font-weight: 300 800;
+	font-style: normal;
+	font-display: swap;
+}
+
+@theme {
+	--color-bg: #f8f5f3;
+	--color-ink: #1a1715;
+	--color-accent: #9a2018;
+	--color-accent-dk: #572a21;
+	--color-surface: #ddc8b6;
+	--color-line: #a18777;
+	--color-text-2: #605c5a;
+	--color-decor: #a4a09e; /* never text on cream */
+	--color-rose: #d0afa8;
+	--color-steel: #598398;
+
+	/* reader — brand crimson is unusable here (2.33:1 measured) */
+	--color-reader-bg: #121110;
+	--color-reader-chrome: #1a1715;
+	--color-reader-ink: #f8f5f3;
+	--color-reader-decor: #a4a09e;
+	--color-reader-accent: #db6255;
+
+	--font-display: "Fraunces", ui-serif, Georgia, serif;
+	--font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
+
+	--breakpoint-xs: 360px;
+}
+
+@layer base {
+	html {
+		background: var(--color-bg);
+		color: var(--color-ink);
+	}
+	body {
+		@apply bg-bg font-sans text-ink;
+	}
+}
+
+/* Eyebrow / section label: the serif, all caps, wide tracking. */
+.eyebrow {
+	@apply font-display text-[0.72rem] font-bold tracking-[0.18em] text-accent uppercase;
+}
+
+/* The recurring solid crimson diamond that sits above section titles. */
+.diamond {
+	@apply inline-block size-2 rotate-45 bg-accent;
 }
