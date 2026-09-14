@@ -154,6 +154,13 @@ export function createPrismaSocialData(db: Database): SocialDataPort {
 		async deleteFollow(followerId, creatorId) {
 			await db.follow.deleteMany({ where: { followerId, creatorId } });
 		},
+		async existsFollow(followerId, creatorId) {
+			const row = await db.follow.findUnique({
+				where: { followerId_creatorId: { followerId, creatorId } },
+				select: { id: true },
+			});
+			return row !== null;
+		},
 
 		async insertReport(row: NewReportRow) {
 			try {

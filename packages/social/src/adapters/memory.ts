@@ -147,6 +147,11 @@ export function createMemorySocialData(
 			);
 			if (i !== -1) follows.splice(i, 1);
 		},
+		async existsFollow(followerId, creatorId) {
+			return follows.some(
+				(f) => f.followerId === followerId && f.creatorId === creatorId,
+			);
+		},
 
 		async insertReport(row: NewReportRow) {
 			const open = reports.some(

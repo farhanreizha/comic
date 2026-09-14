@@ -156,6 +156,7 @@ export type SocialDataPort = {
 		creatorId: string,
 	): Promise<void>;
 	deleteFollow(followerId: string, creatorId: string): Promise<void>;
+	existsFollow(followerId: string, creatorId: string): Promise<boolean>;
 
 	/** Throws CONFLICT-coded error when the reporter's open report exists. */
 	insertReport(row: NewReportRow): Promise<void>;
@@ -178,6 +179,7 @@ export type Social = {
 	ratingSummary(viewer: Viewer, comicId: string): Promise<RatingSummary>;
 	follow(viewer: Viewer, input: { creatorId: string }): Promise<void>;
 	unfollow(viewer: Viewer, input: { creatorId: string }): Promise<void>;
+	isFollowing(viewer: Viewer, creatorId: string): Promise<boolean>;
 	report(
 		viewer: Viewer,
 		input: {

@@ -277,4 +277,26 @@ describe("social — interface tests (docs/design/social-admin.md)", () => {
 			),
 		).toBe("INVALID_INPUT");
 	});
+
+	// Test 12: isFollowing — the read path follow state was missing.
+	test("isFollowing: true after follow, false after unfollow, false unsaved", async () => {
+		const { social } = setup();
+		expect(await social.isFollowing(READER, "u-owner")).toBe(false);
+		await social.follow(READER, { creatorId: "u-owner" });
+		expect(await social.isFollowing(READER, "u-owner")).toBe(true);
+		await social.unfollow(READER, { creatorId: "u-owner" });
+		expect(await social.isFollowing(READER, "u-owner")).toBe(false);
+		// another user's follow does not leak into this viewer's answer
+		await social.follow(OWNER, { creatorId: "u-admin" });
+		expect(await social.isFollowing(READER, "u-admin")).toBe(false);
+	});
+
+	test("isFollowing: anonymous → false, unknown creatorId → false (no leak)", async () => {
+		const { social } = setup();
+		await social.follow(READER, { creatorId: "u-owner" });
+		expect(await social.isFollowing(ANONYMOUS, "u-owner")).toBe(false);
+		expect(await social.isFollowing(READER, "u-nope")).toBe(false);
+		// self-follow is false, not an error, even though follow() rejects it
+		expect(await social.isFollowing(READER, "u-reader")).toBe(false);
+	});
 });

@@ -213,6 +213,13 @@ export function createSocial(deps: {
 			await data.deleteFollow(userId, input.creatorId);
 		},
 
+		async isFollowing(viewer, creatorId) {
+			// A render-time read: never throws. Anonymous → false; an unknown
+			// creatorId → false — the read must not leak account existence.
+			if (viewer.kind === "anonymous") return false;
+			return data.existsFollow(viewer.id, creatorId);
+		},
+
 		async report(viewer, input) {
 			const userId = currentUserId(viewer);
 			if (!REPORT_REASONS.includes(input.reason)) {

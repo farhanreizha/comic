@@ -95,6 +95,13 @@ export const socialRouter = {
 		.handler(async ({ input, context }) =>
 			crossSeam(() => socialIn(context.db).unfollow(context.viewer, input)),
 		),
+	isFollowing: o
+		.input(z.object({ creatorId: z.string().min(1) }))
+		.handler(async ({ input, context }) =>
+			crossSeam(() =>
+				socialIn(context.db).isFollowing(context.viewer, input.creatorId),
+			),
+		),
 	report: o
 		.input(
 			z.object({
