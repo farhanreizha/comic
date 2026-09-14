@@ -3,6 +3,7 @@ import { createForm } from "@tanstack/svelte-form";
 import { z } from "zod";
 import { goto } from "$app/navigation";
 import { authClient } from "$lib/auth-client";
+import { Button, Input } from "$components/ui";
 import { m } from "$paraglide/messages.js";
 
 let { switchToSignIn } = $props<{ switchToSignIn: () => void }>();
@@ -54,89 +55,68 @@ type SubmitState = Pick<typeof form.state, "canSubmit" | "isSubmitting">;
 	>
 		<form.Field name="name">
 			{#snippet children(field)}
-				<div class="space-y-1">
-					<label for={field.name}>{m.auth_name()}</label>
-					<input
-						id={field.name}
-						name={field.name}
-						class="w-full border"
-						onblur={field.handleBlur}
-						value={field.state.value}
-						oninput={(e: Event) => {
-							const target = e.target as HTMLInputElement;
-							field.handleChange(target.value);
-						}}
-					/>
-					{#if field.state.meta.isTouched}
-						{#each field.state.meta.errors as error}
-							<p class="text-sm text-red-500" role="alert">{error}</p>
-						{/each}
-					{/if}
-				</div>
+				<Input
+					id={field.name}
+					name={field.name}
+					label={m.auth_name()}
+					onblur={field.handleBlur}
+					value={field.state.value}
+					oninput={(e: Event) => {
+						const target = e.target as HTMLInputElement;
+						field.handleChange(target.value);
+					}}
+					error={field.state.meta.isTouched ? field.state.meta.errors.join(", ") : undefined}
+				/>
 			{/snippet}
 		</form.Field>
 
 		<form.Field name="email">
 			{#snippet children(field)}
-				<div class="space-y-1">
-					<label for={field.name}>{m.auth_email()}</label>
-					<input
-						id={field.name}
-						name={field.name}
-						type="email"
-						class="w-full border"
-						onblur={field.handleBlur}
-						value={field.state.value}
-						oninput={(e: Event) => {
-							const target = e.target as HTMLInputElement;
-							field.handleChange(target.value);
-						}}
-					/>
-					{#if field.state.meta.isTouched}
-						{#each field.state.meta.errors as error}
-							<p class="text-sm text-red-500" role="alert">{error}</p>
-						{/each}
-					{/if}
-				</div>
+				<Input
+					id={field.name}
+					name={field.name}
+					type="email"
+					label={m.auth_email()}
+					onblur={field.handleBlur}
+					value={field.state.value}
+					oninput={(e: Event) => {
+						const target = e.target as HTMLInputElement;
+						field.handleChange(target.value);
+					}}
+					error={field.state.meta.isTouched ? field.state.meta.errors.join(", ") : undefined}
+				/>
 			{/snippet}
 		</form.Field>
 
 		<form.Field name="password">
 			{#snippet children(field)}
-				<div class="space-y-1">
-					<label for={field.name}>{m.auth_password()}</label>
-					<input
-						id={field.name}
-						name={field.name}
-						type="password"
-						class="w-full border"
-						onblur={field.handleBlur}
-						value={field.state.value}
-						oninput={(e: Event) => {
-							const target = e.target as HTMLInputElement;
-							field.handleChange(target.value);
-						}}
-					/>
-					{#if field.state.meta.isTouched}
-						{#each field.state.meta.errors as error}
-							<p class="text-sm text-red-500" role="alert">{error}</p>
-						{/each}
-					{/if}
-				</div>
+				<Input
+					id={field.name}
+					name={field.name}
+					type="password"
+					label={m.auth_password()}
+					onblur={field.handleBlur}
+					value={field.state.value}
+					oninput={(e: Event) => {
+						const target = e.target as HTMLInputElement;
+						field.handleChange(target.value);
+					}}
+					error={field.state.meta.isTouched ? field.state.meta.errors.join(", ") : undefined}
+				/>
 			{/snippet}
 		</form.Field>
 
 		<form.Subscribe selector={(state: typeof form.state): SubmitState => ({ canSubmit: state.canSubmit, isSubmitting: state.isSubmitting })}>
 			{#snippet children(state: SubmitState)}
-				<button type="submit" class="w-full" disabled={!state.canSubmit || state.isSubmitting}>
+				<Button type="submit" class="w-full" disabled={!state.canSubmit || state.isSubmitting}>
 					{state.isSubmitting ? m.auth_submitting() : m.auth_signup_button()}
-				</button>
+				</Button>
 			{/snippet}
 		</form.Subscribe>
 	</form>
 
 	<div class="mt-4 text-center">
-		<button type="button" class="text-indigo-600 hover:text-indigo-800" onclick={switchToSignIn}>
+		<button type="button" class="text-accent hover:text-accent-dk" onclick={switchToSignIn}>
 			{m.auth_have_account()} · {m.auth_signin_button()}
 		</button>
 	</div>

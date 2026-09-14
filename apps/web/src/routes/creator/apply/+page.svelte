@@ -2,6 +2,7 @@
 	import { invalidate } from "$app/navigation";
 	import { client } from "$lib/orpc";
 	import { errorText, mapWriteError } from "$lib/write-ui";
+	import { Button, Input, Textarea } from "$components/ui";
 	import { m } from "$paraglide/messages.js";
 
 	let { data } = $props();
@@ -78,32 +79,22 @@
 
 		{#if !application || application.status === "rejected"}
 			<form class="mt-6 space-y-4" onsubmit={submit}>
-				<div>
-					<label for="motivation" class="block text-sm font-semibold text-ink">
-						{m.apply_motivation()}
-					</label>
-					<textarea
-						id="motivation"
-						name="motivation"
-						rows="4"
-						required
-						maxlength="5000"
-						class="mt-1 w-full border border-line bg-bg p-2 text-sm text-ink"
-						placeholder={m.apply_motivation_placeholder()}
-					></textarea>
-				</div>
-				<div>
-					<label for="portfolio" class="block text-sm font-semibold text-ink">
-						{m.apply_portfolio()}
-					</label>
-					<input
-						id="portfolio"
-						name="portfolioUrl"
-						type="url"
-						maxlength="2000"
-						class="mt-1 w-full border border-line bg-bg p-2 text-sm text-ink"
-					/>
-				</div>
+				<Textarea
+					id="motivation"
+					name="motivation"
+					label={m.apply_motivation()}
+					rows={4}
+					required
+					maxlength={5000}
+					placeholder={m.apply_motivation_placeholder()}
+				/>
+				<Input
+					id="portfolio"
+					name="portfolioUrl"
+					type="url"
+					label={m.apply_portfolio()}
+					maxlength={2000}
+				/>
 				<div>
 					<label for="sample" class="block text-sm font-semibold text-ink">
 						{m.apply_sample()}
@@ -117,13 +108,9 @@
 					/>
 				</div>
 				<div class="flex items-center gap-3">
-					<button
-						type="submit"
-						disabled={submitting}
-						class="bg-accent px-5 py-2 text-sm font-semibold text-bg transition-colors hover:bg-accent-dk disabled:opacity-60"
-					>
+					<Button type="submit" disabled={submitting}>
 						{m.apply_submit()}
-					</button>
+					</Button>
 					{#if msg}
 						<span class="text-sm {application ? 'text-text-2' : 'text-accent'}" role={application ? 'status' : 'alert'}>{msg}</span>
 					{/if}
