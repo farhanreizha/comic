@@ -1,21 +1,15 @@
 <script lang="ts">
-import { createQuery } from "@tanstack/svelte-query";
 import ComicCard from "$components/ComicCard.svelte";
-import { orpc } from "$lib/orpc";
 import { m } from "$paraglide/messages.js";
 import { ENV } from "../../env";
 
-const me = createQuery(() =>
-	orpc.reading.me.queryOptions({ staleTime: 60_000 }),
-);
-const signedIn = $derived(Boolean(me.data?.signedIn));
+// Server load resolved the viewer and the shelf; no client query needed for
+// the first paint.
+let { data } = $props();
 
-const shelfQuery = createQuery(() =>
-	orpc.reading.shelf.queryOptions({ enabled: signedIn }),
-);
-
-const saved = $derived(shelfQuery.data?.saved ?? []);
-const continuing = $derived(shelfQuery.data?.continueReading ?? []);
+const signedIn = $derived(data.signedIn);
+const saved = $derived(data.shelf?.saved ?? []);
+const continuing = $derived(data.shelf?.continueReading ?? []);
 
 const cover = (url: string | null) =>
 	url ? `${ENV.PUBLIC_SERVER_URL}${url}` : null;
@@ -30,11 +24,6 @@ const cover = (url: string | null) =>
 
 	{#if !signedIn}
 		<p class="mt-6 text-sm text-text-2">{m.library_signin_prompt()}</p>
-	{:else if shelfQuery.isPending}
-		<div class="mt-6 space-y-4">
-			<div class="h-4 w-40 animate-pulse bg-surface/60"></div>
-			<div class="h-4 w-40 animate-pulse bg-surface/40"></div>
-		</div>
 	{:else}
 		<section class="mt-8">
 			<h2 class="eyebrow">{m.library_continue()}</h2>
