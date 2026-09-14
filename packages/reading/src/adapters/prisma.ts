@@ -214,6 +214,24 @@ export function createPrismaComicData(db: Database): ComicDataPort {
 			});
 			return rows.map((row) => toComicRecord(row.comic));
 		},
+		async saveComic(userId, comicId) {
+			// Idempotent: upsert on the (userId, comicId) unique — no CONFLICT.
+			await db.savedComic.upsert({
+				where: { userId_comicId: { userId, comicId } },
+				create: { userId, comicId },
+				update: {},
+			});
+		},
+		async unsaveComic(userId, comicId) {
+			await db.savedComic.deleteMany({ where: { userId, comicId } });
+		},
+		async isSavedComic(userId, comicId) {
+			const row = await db.savedComic.findUnique({
+				where: { userId_comicId: { userId, comicId } },
+				select: { id: true },
+			});
+			return row !== null;
+		},
 		async getProgress(userId, chapterId) {
 			return db.progress.findUnique({
 				where: { userId_chapterId: { userId, chapterId } },

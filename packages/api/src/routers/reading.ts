@@ -112,6 +112,36 @@ export const readingRouter = {
 				}).recordProgress(context.viewer, input.chapterId, input.page),
 			),
 		),
+	saveComic: o
+		.input(z.object({ comicId: z.string().min(1) }))
+		.handler(({ context, input }) =>
+			crossSeam(() =>
+				createReading({
+					data: createPrismaComicData(context.db),
+					files: createStorageFilesPort(context.storage),
+				}).saveComic(context.viewer, input.comicId),
+			),
+		),
+	unsaveComic: o
+		.input(z.object({ comicId: z.string().min(1) }))
+		.handler(({ context, input }) =>
+			crossSeam(() =>
+				createReading({
+					data: createPrismaComicData(context.db),
+					files: createStorageFilesPort(context.storage),
+				}).unsaveComic(context.viewer, input.comicId),
+			),
+		),
+	isSaved: o
+		.input(z.object({ comicId: z.string().min(1) }))
+		.handler(({ context, input }) =>
+			crossSeam(() =>
+				createReading({
+					data: createPrismaComicData(context.db),
+					files: createStorageFilesPort(context.storage),
+				}).isSaved(context.viewer, input.comicId),
+			),
+		),
 	/** The shell needs the viewer's role to gate nav items; sessions don't carry it. */
 	me: o.handler(({ context }) => ({
 		signedIn: context.viewer.kind === "user",

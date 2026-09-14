@@ -634,4 +634,86 @@ describe("reading — interface tests (docs/design/reading-path.md)", () => {
 			expect(ok.kind).toBe("comic");
 		});
 	});
+
+	describe("8. shelf save/unsave/isSaved", () => {
+		test("save/unsave/isSaved round trip", async () => {
+			const { data, reading } = makeReading();
+			data.seed.comics.push(comic("c-pub"));
+			expect(await reading.isSaved(READER, "c-pub")).toBe(false);
+			await reading.saveComic(READER, "c-pub");
+			expect(await reading.isSaved(READER, "c-pub")).toBe(true);
+			expect(data.seed.saved).toEqual([
+				{ userId: "u-reader", comicId: "c-pub" },
+			]);
+			await reading.unsaveComic(READER, "c-pub");
+			expect(await reading.isSaved(READER, "c-pub")).toBe(false);
+			expect(data.seed.saved.length).toBe(0);
+		});
+
+		test("save is idempotent; unsave on unsaved is a no-op", async () => {
+			const { data, reading } = makeReading();
+			data.seed.comics.push(comic("c-pub"));
+			await reading.saveComic(READER, "c-pub");
+			await reading.saveComic(READER, "c-pub");
+			expect(data.seed.saved.length).toBe(1);
+			expect(await reading.isSaved(READER, "c-pub")).toBe(true);
+			await reading.unsaveComic(READER, "c-pub");
+			await reading.unsaveComic(READER, "c-pub");
+			expect(data.seed.saved.length).toBe(0);
+		});
+
+		test("anonymous save/unsave → UNAUTHENTICATED; isSaved → false", async () => {
+			const { data, reading } = makeReading();
+			data.seed.comics.push(comic("c-pub"));
+			expect(await errorOf(() => reading.saveComic(ANONYMOUS, "c-pub"))).toBe(
+				"UNAUTHENTICATED",
+			);
+			expect(await errorOf(() => reading.unsaveComic(ANONYMOUS, "c-pub"))).toBe(
+				"UNAUTHENTICATED",
+			);
+			expect(await reading.isSaved(ANONYMOUS, "c-pub")).toBe(false);
+			expect(await reading.isSaved(ANONYMOUS, "does-not-exist")).toBe(false);
+		});
+
+		test("inaccessible comic → NOT_FOUND on write, false on read", async () => {
+			const { data, reading } = makeReading();
+			data.seed.comics.push(
+				comic("c-priv", { visibility: "private", status: "published" }),
+			);
+			// READER cannot see a private comic owned by u-owner; owner can.
+			expect(await errorOf(() => reading.saveComic(READER, "c-priv"))).toBe(
+				"NOT_FOUND",
+			);
+			expect(await errorOf(() => reading.unsaveComic(READER, "c-priv"))).toBe(
+				"NOT_FOUND",
+			);
+			expect(await reading.isSaved(READER, "c-priv")).toBe(false);
+			expect(
+				await errorOf(() => reading.saveComic(READER, "does-not-exist")),
+			).toBe("NOT_FOUND");
+			await reading.saveComic(OWNER, "c-priv");
+			expect(await reading.isSaved(OWNER, "c-priv")).toBe(true);
+		});
+
+		test("shelf and isSaved agree, including after takedown hides a saved comic", async () => {
+			const { data, reading } = makeReading();
+			const target = comic("c-pub");
+			data.seed.comics.push(target, comic("c-other-pub"));
+			await reading.saveComic(READER, "c-pub");
+			await reading.saveComic(READER, "c-other-pub");
+			let shelf = await reading.shelf(READER);
+			expect(shelf.saved.map((c) => c.id).sort()).toEqual([
+				"c-other-pub",
+				"c-pub",
+			]);
+			expect(await reading.isSaved(READER, "c-pub")).toBe(true);
+			expect(await reading.isSaved(READER, "c-other-pub")).toBe(true);
+			expect(await reading.isSaved(READER, "c-never")).toBe(false);
+			// Takedown hides it from the shelf → isSaved must flip to false too.
+			target.takenDownAt = new Date();
+			shelf = await reading.shelf(READER);
+			expect(shelf.saved.map((c) => c.id)).toEqual(["c-other-pub"]);
+			expect(await reading.isSaved(READER, "c-pub")).toBe(false);
+		});
+	});
 });

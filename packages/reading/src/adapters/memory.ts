@@ -115,6 +115,21 @@ export function createMemoryComicData(seed: MemorySeed = {}): ComicDataPort & {
 			);
 			return comics.filter((c) => ids.has(c.id)).sort(byUpdatedDesc);
 		},
+		async saveComic(userId, comicId) {
+			const exists = saved.some(
+				(s) => s.userId === userId && s.comicId === comicId,
+			);
+			if (!exists) saved.push({ userId, comicId });
+		},
+		async unsaveComic(userId, comicId) {
+			const i = saved.findIndex(
+				(s) => s.userId === userId && s.comicId === comicId,
+			);
+			if (i !== -1) saved.splice(i, 1);
+		},
+		async isSavedComic(userId, comicId) {
+			return saved.some((s) => s.userId === userId && s.comicId === comicId);
+		},
 		async getProgress(userId, chapterId) {
 			const found = progress.find(
 				(p) => p.userId === userId && p.chapterId === chapterId,

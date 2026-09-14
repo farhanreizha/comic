@@ -198,5 +198,31 @@ export function createReading(deps: {
 			const clamped = Math.max(1, Math.min(Math.trunc(page), pages.length));
 			await data.saveProgress(viewer.id, chapter.id, clamped);
 		},
+
+		async saveComic(viewer: Viewer, comicId: string): Promise<void> {
+			if (viewer.kind === "anonymous") {
+				throw readingError("UNAUTHENTICATED", "saving requires a viewer");
+			}
+			// Idempotent by contract: the adapter upserts on (userId, comicId).
+			const comic = await comicOrNotFound(data, viewer, { id: comicId });
+			await data.saveComic(viewer.id, comic.id);
+		},
+
+		async unsaveComic(viewer: Viewer, comicId: string): Promise<void> {
+			if (viewer.kind === "anonymous") {
+				throw readingError("UNAUTHENTICATED", "unsaving requires a viewer");
+			}
+			const comic = await comicOrNotFound(data, viewer, { id: comicId });
+			await data.unsaveComic(viewer.id, comic.id);
+		},
+
+		async isSaved(viewer: Viewer, comicId: string): Promise<boolean> {
+			// A render-time read: never throws. Anonymous or hidden → false,
+			// so it agrees with shelf()'s canView filtering by construction.
+			if (viewer.kind === "anonymous") return false;
+			const comic = await data.findComic(comicId);
+			if (!comic || !canView(viewer, comic)) return false;
+			return data.isSavedComic(viewer.id, comic.id);
+		},
 	};
 }

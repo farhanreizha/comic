@@ -169,6 +169,10 @@ export type ComicDataPort = {
 	listPages(chapterId: string): Promise<PageRecord[]>;
 	findPage(id: string): Promise<PageRecord | null>;
 	listSaved(userId: string): Promise<ComicRecord[]>;
+	/** Idempotent: an existing (userId, comicId) row stays a no-op. */
+	saveComic(userId: string, comicId: string): Promise<void>;
+	unsaveComic(userId: string, comicId: string): Promise<void>;
+	isSavedComic(userId: string, comicId: string): Promise<boolean>;
 	getProgress(
 		userId: string,
 		chapterId: string,
@@ -193,6 +197,9 @@ export type Reading = {
 	shelf(
 		viewer: Viewer,
 	): Promise<{ saved: ComicCard[]; continueReading: ContinueEntry[] }>;
+	saveComic(viewer: Viewer, comicId: string): Promise<void>;
+	unsaveComic(viewer: Viewer, comicId: string): Promise<void>;
+	isSaved(viewer: Viewer, comicId: string): Promise<boolean>;
 	recordProgress(
 		viewer: Viewer,
 		chapterId: string,
