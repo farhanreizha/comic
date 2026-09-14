@@ -1,67 +1,68 @@
 <script lang="ts">
-	import { createQuery } from "@tanstack/svelte-query";
-	import { page } from "$app/state";
-	import { client, orpc } from "$lib/orpc";
-	import { genreLabel } from "$lib/genres";
-	import { shelf } from "$lib/shelf";
-	import { m } from "$paraglide/messages.js";
-	import { ENV } from "../../../env";
+import { createQuery } from "@tanstack/svelte-query";
+import { page } from "$app/state";
+import { genreLabel } from "$lib/genres";
+import { client, orpc } from "$lib/orpc";
+import { shelf } from "$lib/shelf";
+import { m } from "$paraglide/messages.js";
+import { ENV } from "../../../env";
 
-	const slug = $derived(String(page.params.slug));
+const slug = $derived(String(page.params.slug));
 
-	const comicQuery = createQuery(() =>
-		orpc.reading.read.queryOptions({
-			input: { kind: "comic", ref: { slug } },
-		}),
-	);
-	const me = createQuery(() =>
-		orpc.reading.me.queryOptions({ staleTime: 60_000 }),
-	);
-	const signedIn = $derived(Boolean(me.data?.signedIn));
+const comicQuery = createQuery(() =>
+	orpc.reading.read.queryOptions({
+		input: { kind: "comic", ref: { slug } },
+	}),
+);
+const me = createQuery(() =>
+	orpc.reading.me.queryOptions({ staleTime: 60_000 }),
+);
+const signedIn = $derived(Boolean(me.data?.signedIn));
 
-	const comic = $derived(
-		comicQuery.data?.kind === "comic" ? comicQuery.data : null,
-	);
-	const detail = $derived(comic?.comic ?? null);
+const comic = $derived(
+	comicQuery.data?.kind === "comic" ? comicQuery.data : null,
+);
+const detail = $derived(comic?.comic ?? null);
 
-	// Social entry points require a viewer; anonymous viewers get UNAUTHORIZED.
-	const rating = createQuery(() =>
-		orpc.social.ratingSummary.queryOptions({
-			input: { comicId: detail?.id ?? "" },
-			enabled: signedIn && Boolean(detail),
-		}),
-	);
-	const comments = createQuery(() =>
-		orpc.social.listComments.queryOptions({
-			input: { comicId: detail?.id ?? "", limit: 20 },
-			enabled: signedIn && Boolean(detail),
-		}),
-	);
+// Social entry points require a viewer; anonymous viewers get UNAUTHORIZED.
+const rating = createQuery(() =>
+	orpc.social.ratingSummary.queryOptions({
+		input: { comicId: detail?.id ?? "" },
+		enabled: signedIn && Boolean(detail),
+	}),
+);
+const comments = createQuery(() =>
+	orpc.social.listComments.queryOptions({
+		input: { comicId: detail?.id ?? "", limit: 20 },
+		enabled: signedIn && Boolean(detail),
+	}),
+);
 
-	const saved = $derived(detail ? $shelf.includes(detail.id) : false);
+const saved = $derived(detail ? $shelf.includes(detail.id) : false);
 
-	// No is-following read path exists yet; the CONFLICT from follow tells us.
-	let following = $state(false);
-	async function toggleFollow() {
-		if (!detail) return;
-		try {
-			if (following) await client.social.unfollow({ creatorId: detail.creator.id });
-			else await client.social.follow({ creatorId: detail.creator.id });
-			following = !following;
-		} catch (error) {
-			if ((error as { code?: string }).code === "CONFLICT") following = true;
-		}
+// No is-following read path exists yet; the CONFLICT from follow tells us.
+let following = $state(false);
+async function toggleFollow() {
+	if (!detail) return;
+	try {
+		if (following)
+			await client.social.unfollow({ creatorId: detail.creator.id });
+		else await client.social.follow({ creatorId: detail.creator.id });
+		following = !following;
+	} catch (error) {
+		if ((error as { code?: string }).code === "CONFLICT") following = true;
 	}
+}
 
-	const cover = $derived(
-		detail?.coverUrl ? `${ENV.PUBLIC_SERVER_URL}${detail.coverUrl}` : null,
-	);
-	const chapters = $derived(comic?.chapters ?? []);
-	const firstChapter = $derived(chapters[0] ?? null);
+const cover = $derived(
+	detail?.coverUrl ? `${ENV.PUBLIC_SERVER_URL}${detail.coverUrl}` : null,
+);
+const chapters = $derived(comic?.chapters ?? []);
+const firstChapter = $derived(chapters[0] ?? null);
 </script>
 
 <svelte:head>
-	<title>{detail?.title ?? m.browse_title()} — komik</title>
+	<title>{detail?.title ?? `${slug} — komik`}</title>
 </svelte:head>
 
 <div class="mx-auto max-w-6xl px-4 py-8">

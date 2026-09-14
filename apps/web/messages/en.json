@@ -76,6 +76,13 @@
 	"auth_have_account": "Already have an account?",
 	"auth_no_account": "No account yet?",
 	"auth_back_home": "Back home",
+	"auth_submitting": "Submitting…",
+	"auth_invalid_email": "Invalid email address",
+	"auth_password_required": "Password is required",
+	"auth_name_min": "Name must be at least 2 characters",
+	"auth_password_min": "Password must be at least 8 characters",
+	"auth_need_account": "Need an account? Sign up",
+	"auth_have_account_cta": "Already have an account? Sign in",
 	"error_generic": "Something went wrong.",
 	"error_unauthenticated": "Please sign in first."
 }

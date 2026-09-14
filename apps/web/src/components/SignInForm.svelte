@@ -3,12 +3,13 @@ import { createForm } from "@tanstack/svelte-form";
 import { z } from "zod";
 import { goto } from "$app/navigation";
 import { authClient } from "$lib/auth-client";
+import { m } from "$paraglide/messages.js";
 
 let { switchToSignUp } = $props<{ switchToSignUp: () => void }>();
 
 const validationSchema = z.object({
-	email: z.email("Invalid email address"),
-	password: z.string().min(1, "Password is required"),
+	email: z.email(m.auth_invalid_email()),
+	password: z.string().min(1, m.auth_password_required()),
 });
 
 const form = createForm(() => ({
@@ -19,9 +20,7 @@ const form = createForm(() => ({
 			{
 				onSuccess: () => goto("/dashboard"),
 				onError: (error) => {
-					console.log(
-						error.error.message || "Sign in failed. Please try again.",
-					);
+					console.log(error.error.message || m.error_generic());
 				},
 			},
 		);
@@ -35,7 +34,7 @@ type SubmitState = Pick<typeof form.state, "canSubmit" | "isSubmitting">;
 </script>
 
 <div class="mx-auto mt-10 w-full max-w-md p-6">
-	<h1 class="mb-6 text-center font-bold text-3xl">Welcome Back</h1>
+	<h1 class="mb-6 text-center font-bold text-3xl">{m.auth_signin_title()}</h1>
 
 	<form
 		class="space-y-4"
@@ -48,7 +47,7 @@ type SubmitState = Pick<typeof form.state, "canSubmit" | "isSubmitting">;
 		<form.Field name="email">
 			{#snippet children(field)}
 				<div class="space-y-1">
-					<label for={field.name}>Email</label>
+					<label for={field.name}>{m.auth_email()}</label>
 					<input
 						id={field.name}
 						name={field.name}
@@ -73,7 +72,7 @@ type SubmitState = Pick<typeof form.state, "canSubmit" | "isSubmitting">;
 		<form.Field name="password">
 			{#snippet children(field)}
 				<div class="space-y-1">
-					<label for={field.name}>Password</label>
+					<label for={field.name}>{m.auth_password()}</label>
 					<input
 						id={field.name}
 						name={field.name}
@@ -98,7 +97,7 @@ type SubmitState = Pick<typeof form.state, "canSubmit" | "isSubmitting">;
 		<form.Subscribe selector={(state: typeof form.state): SubmitState => ({ canSubmit: state.canSubmit, isSubmitting: state.isSubmitting })}>
 			{#snippet children(state: SubmitState)}
 				<button type="submit" class="w-full" disabled={!state.canSubmit || state.isSubmitting}>
-					{state.isSubmitting ? 'Submitting...' : 'Sign In'}
+					{state.isSubmitting ? m.auth_submitting() : m.auth_signin_button()}
 				</button>
 			{/snippet}
 		</form.Subscribe>
@@ -106,7 +105,7 @@ type SubmitState = Pick<typeof form.state, "canSubmit" | "isSubmitting">;
 
 	<div class="mt-4 text-center">
 		<button type="button" class="text-indigo-600 hover:text-indigo-800" onclick={switchToSignUp}>
-			Need an account? Sign Up
+			{m.auth_no_account()} · {m.auth_signup_button()}
 		</button>
 	</div>
 </div>

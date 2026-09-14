@@ -1,199 +1,197 @@
 <script lang="ts">
-	import { onMount } from "svelte";
-	import { createQuery } from "@tanstack/svelte-query";
-	import { browser } from "$app/environment";
-	import { page } from "$app/state";
-	import { goto } from "$app/navigation";
-	import { client, orpc } from "$lib/orpc";
-	import { activeWindow } from "$lib/reader";
-	import { m } from "$paraglide/messages.js";
-	import { ENV } from "../../../env";
+import { createQuery } from "@tanstack/svelte-query";
+import { onMount } from "svelte";
+import { browser } from "$app/environment";
+import { goto } from "$app/navigation";
+import { page } from "$app/state";
+import { client, orpc } from "$lib/orpc";
+import { activeWindow } from "$lib/reader";
+import { m } from "$paraglide/messages.js";
+import { ENV } from "../../../env";
 
-	const chapterId = $derived(String(page.params.chapterId));
+const chapterId = $derived(String(page.params.chapterId));
 
-	const chapterQuery = createQuery(() =>
-		orpc.reading.read.queryOptions({
-			input: { kind: "chapter", chapterId },
-			staleTime: Infinity,
-		}),
-	);
-	const me = createQuery(() =>
-		orpc.reading.me.queryOptions({ staleTime: 60_000 }),
-	);
-	const signedIn = $derived(Boolean(me.data?.signedIn));
+const chapterQuery = createQuery(() =>
+	orpc.reading.read.queryOptions({
+		input: { kind: "chapter", chapterId },
+		staleTime: Number.POSITIVE_INFINITY,
+	}),
+);
+const me = createQuery(() =>
+	orpc.reading.me.queryOptions({ staleTime: 60_000 }),
+);
+const signedIn = $derived(Boolean(me.data?.signedIn));
 
-	// Comic slug for the "back" link; the chapter result only carries comicId.
-	const comicQuery = createQuery(() =>
-		orpc.reading.read.queryOptions({
-			input: { kind: "comic", ref: { id: chapter?.comicId ?? "" } },
-			enabled: Boolean(chapter),
-		}),
-	);
+const chapter = $derived(
+	chapterQuery.data?.kind === "chapter" ? chapterQuery.data.chapter : null,
+);
+const pages = $derived(
+	chapterQuery.data?.kind === "chapter" ? chapterQuery.data.pages : [],
+);
 
-	const chapter = $derived(
-		chapterQuery.data?.kind === "chapter" ? chapterQuery.data.chapter : null,
-	);
-	const pages = $derived(
-		chapterQuery.data?.kind === "chapter" ? chapterQuery.data.pages : [],
-	);
-	const totalPages = $derived(pages.length);
+// Comic slug for the "back" link; the chapter result only carries comicId.
+const comicQuery = createQuery(() =>
+	orpc.reading.read.queryOptions({
+		input: { kind: "comic", ref: { id: chapter?.comicId ?? "" } },
+		enabled: Boolean(chapter),
+	}),
+);
+const totalPages = $derived(pages.length);
 
-	/** Pages within this many slots of the active one get real <img>s. */
-	const WINDOW = 5;
-	/** Progress is the page covering the viewport's reading line (its middle). */
-	let current = $state(1);
-	// ponytail: window recomputed from the scroll-derived `current` instead of
-	// per-slot IntersectionObservers — same ±5 pages, fewer moving parts.
-	const activeIds = $derived.by(() => {
-		const [start, end] = activeWindow(current, pages.length, WINDOW);
-		const set = new Set<string>();
-		for (let i = start - 1; i < end; i++) set.add(pages[i].id);
-		return set;
-	});
+/** Pages within this many slots of the active one get real <img>s. */
+const WINDOW = 5;
+/** Progress is the page covering the viewport's reading line (its middle). */
+let current = $state(1);
+// ponytail: window recomputed from the scroll-derived `current` instead of
+// per-slot IntersectionObservers — same ±5 pages, fewer moving parts.
+const activeIds = $derived.by(() => {
+	const [start, end] = activeWindow(current, pages.length, WINDOW);
+	const set = new Set<string>();
+	for (let i = start - 1; i < end; i++) set.add(pages[i].id);
+	return set;
+});
 
-	const nextChapter = $derived.by(() => {
-		const comic = comicQuery.data;
-		if (!comic || comic.kind !== "comic") return null;
-		const idx = comic.chapters.findIndex(
-			(ch) => ch.id === chapterId,
-		);
-		return idx >= 0 && idx + 1 < comic.chapters.length
-			? comic.chapters[idx + 1]
-			: null;
-	});
+const nextChapter = $derived.by(() => {
+	const comic = comicQuery.data;
+	if (!comic || comic.kind !== "comic") return null;
+	const idx = comic.chapters.findIndex((ch) => ch.id === chapterId);
+	return idx >= 0 && idx + 1 < comic.chapters.length
+		? comic.chapters[idx + 1]
+		: null;
+});
 
-	const imgSrc = (id: string) => `${ENV.PUBLIC_SERVER_URL}/pages/${id}`;
+const imgSrc = (id: string) => `${ENV.PUBLIC_SERVER_URL}/pages/${id}`;
 
-	let strip: HTMLDivElement | undefined = $state();
+let strip: HTMLDivElement | undefined = $state();
 
-	function computeCurrent() {
-		if (!strip || pages.length === 0) return;
-		const line = window.innerHeight / 2;
-		let best = 1;
-		let bestDist = Infinity;
-		for (let i = 0; i < strip.children.length; i++) {
-			const el = strip.children[i] as HTMLElement;
-			const r = el.getBoundingClientRect();
-			if (r.top <= line && r.bottom >= line) {
-				best = i + 1;
-				bestDist = 0;
-				break;
-			}
-			const dist = r.top > line ? r.top - line : line - r.bottom;
-			if (dist < bestDist) {
-				bestDist = dist;
-				best = i + 1;
-			}
+function computeCurrent() {
+	if (!strip || pages.length === 0) return;
+	const line = window.innerHeight / 2;
+	let best = 1;
+	let bestDist = Number.POSITIVE_INFINITY;
+	for (let i = 0; i < strip.children.length; i++) {
+		const el = strip.children[i] as HTMLElement;
+		const r = el.getBoundingClientRect();
+		if (r.top <= line && r.bottom >= line) {
+			best = i + 1;
+			bestDist = 0;
+			break;
 		}
-		current = best;
-	}
-
-	function scrollToPage(n: number) {
-		const target = Math.min(Math.max(1, n), totalPages);
-		const el = strip?.children[target - 1] as HTMLElement | undefined;
-		el?.scrollIntoView({ behavior: "smooth", block: "start" });
-		current = target;
-	}
-
-	function advance() {
-		if (current >= totalPages) {
-			if (nextChapter) void goto(`/read/${nextChapter.id}`);
-			return;
+		const dist = r.top > line ? r.top - line : line - r.bottom;
+		if (dist < bestDist) {
+			bestDist = dist;
+			best = i + 1;
 		}
-		scrollToPage(current + 1);
 	}
+	current = best;
+}
 
-	/* --- progress: throttled writes, flushed on visibilitychange --- */
-	const PROGRESS_MS = 2000;
-	let dirty = false;
-	let lastSent = 0;
-	let timer: ReturnType<typeof setTimeout> | undefined;
+function scrollToPage(n: number) {
+	const target = Math.min(Math.max(1, n), totalPages);
+	const el = strip?.children[target - 1] as HTMLElement | undefined;
+	el?.scrollIntoView({ behavior: "smooth", block: "start" });
+	current = target;
+}
 
-	function sendProgress() {
-		if (!signedIn || !dirty || !current) return;
-		void client.reading.recordProgress({ chapterId, page: current }).catch(() => {});
-		dirty = false;
-		lastSent = Date.now();
+function advance() {
+	if (current >= totalPages) {
+		if (nextChapter) void goto(`/read/${nextChapter.id}`);
+		return;
 	}
+	scrollToPage(current + 1);
+}
 
-	function scheduleProgress() {
-		dirty = true;
-		const wait = PROGRESS_MS - (Date.now() - lastSent);
-		if (wait <= 0) {
-			if (timer) clearTimeout(timer);
+/* --- progress: throttled writes, flushed on visibilitychange --- */
+const PROGRESS_MS = 2000;
+let dirty = false;
+let lastSent = 0;
+let timer: ReturnType<typeof setTimeout> | undefined;
+
+function sendProgress() {
+	if (!signedIn || !dirty || !current) return;
+	void client.reading
+		.recordProgress({ chapterId, page: current })
+		.catch(() => {});
+	dirty = false;
+	lastSent = Date.now();
+}
+
+function scheduleProgress() {
+	dirty = true;
+	const wait = PROGRESS_MS - (Date.now() - lastSent);
+	if (wait <= 0) {
+		if (timer) clearTimeout(timer);
+		timer = undefined;
+		sendProgress();
+	} else if (!timer) {
+		timer = setTimeout(() => {
 			timer = undefined;
 			sendProgress();
-		} else if (!timer) {
-			timer = setTimeout(() => {
-				timer = undefined;
-				sendProgress();
-			}, wait);
-		}
+		}, wait);
 	}
+}
 
-	$effect(() => {
-		if (current && browser) scheduleProgress();
-	});
+$effect(() => {
+	if (current && browser) scheduleProgress();
+});
 
-	function onKey(event: KeyboardEvent) {
-		if (event.key === "PageDown" || event.key === " ") {
-			event.preventDefault();
-			advance();
-		} else if (event.key === "PageUp") {
-			event.preventDefault();
-			scrollToPage(current - 1);
-		} else if (event.key === "ArrowDown") {
-			/* native scroll */
-		}
+function onKey(event: KeyboardEvent) {
+	if (event.key === "PageDown" || event.key === " ") {
+		event.preventDefault();
+		advance();
+	} else if (event.key === "PageUp") {
+		event.preventDefault();
+		scrollToPage(current - 1);
+	} else if (event.key === "ArrowDown") {
+		/* native scroll */
 	}
+}
 
-	function onVisibility() {
-		if (document.visibilityState === "hidden") sendProgress();
-	}
+function onVisibility() {
+	if (document.visibilityState === "hidden") sendProgress();
+}
 
-	onMount(() => {
-		computeCurrent();
-		if (pages.length === 0) return;
-		let raf = 0;
-		const onScroll = () => {
-			cancelAnimationFrame(raf);
-			raf = requestAnimationFrame(computeCurrent);
-		};
-		window.addEventListener("scroll", onScroll, { passive: true });
-		document.addEventListener("visibilitychange", onVisibility);
-		return () => {
-			window.removeEventListener("scroll", onScroll);
-			document.removeEventListener("visibilitychange", onVisibility);
-			cancelAnimationFrame(raf);
-			if (timer) clearTimeout(timer);
-			sendProgress();
-		};
-	});
+onMount(() => {
+	computeCurrent();
+	if (pages.length === 0) return;
+	let raf = 0;
+	const onScroll = () => {
+		cancelAnimationFrame(raf);
+		raf = requestAnimationFrame(computeCurrent);
+	};
+	window.addEventListener("scroll", onScroll, { passive: true });
+	document.addEventListener("visibilitychange", onVisibility);
+	return () => {
+		window.removeEventListener("scroll", onScroll);
+		document.removeEventListener("visibilitychange", onVisibility);
+		cancelAnimationFrame(raf);
+		if (timer) clearTimeout(timer);
+		sendProgress();
+	};
+});
 
-	// Resume position: the shelf's continue entry for this chapter, if any.
-	let resumed = $state(false);
-	$effect(() => {
-		if (resumed || !signedIn || pages.length === 0) return;
-		resumed = true;
-		void client.reading
-			.shelf()
-			.then((s) => {
-				const entry = s.continueReading.find(
-					(e) => e.chapter.id === chapterId,
-				);
-				if (entry && entry.page > 1) {
-					// Instant jump — a smooth scroll from page 1 is disorienting.
-					const el = strip?.children[entry.page - 1] as HTMLElement | undefined;
-					el?.scrollIntoView({ block: "start" });
-					current = entry.page;
-				}
-			})
-			.catch(() => {});
-	});
+// Resume position: the shelf's continue entry for this chapter, if any.
+let resumed = $state(false);
+$effect(() => {
+	if (resumed || !signedIn || pages.length === 0) return;
+	resumed = true;
+	void client.reading
+		.shelf()
+		.then((s) => {
+			const entry = s.continueReading.find((e) => e.chapter.id === chapterId);
+			if (entry && entry.page > 1) {
+				// Instant jump — a smooth scroll from page 1 is disorienting.
+				const el = strip?.children[entry.page - 1] as HTMLElement | undefined;
+				el?.scrollIntoView({ block: "start" });
+				current = entry.page;
+			}
+		})
+		.catch(() => {});
+});
 
-	const progressLabel = $derived(
-		totalPages > 0 ? m.reader_page_of({ page: current, total: totalPages }) : "",
-	);
+const progressLabel = $derived(
+	totalPages > 0 ? m.reader_page_of({ page: current, total: totalPages }) : "",
+);
 </script>
 
 <svelte:head>

@@ -76,6 +76,13 @@
 	"auth_have_account": "Sudah punya akun?",
 	"auth_no_account": "Belum punya akun?",
 	"auth_back_home": "Kembali ke beranda",
+	"auth_submitting": "Mengirim…",
+	"auth_invalid_email": "Email tidak valid",
+	"auth_password_required": "Kata sandi wajib diisi",
+	"auth_name_min": "Nama minimal 2 karakter",
+	"auth_password_min": "Kata sandi minimal 8 karakter",
+	"auth_need_account": "Belum punya akun? Daftar",
+	"auth_have_account_cta": "Sudah punya akun? Masuk",
 	"error_generic": "Terjadi kesalahan.",
 	"error_unauthenticated": "Silakan masuk dulu."
 }

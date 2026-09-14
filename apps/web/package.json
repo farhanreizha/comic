@@ -6,9 +6,10 @@
 	"scripts": {
 		"dev": "vite dev",
 		"build": "tsc -b ../../packages/api && vite build",
+		"i18n:compile": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide",
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",
-		"check-types": "tsc -b ../../packages/api && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"check-types": "bun run i18n:compile && tsc -b ../../packages/api && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"env:generate": "varlock codegen"
