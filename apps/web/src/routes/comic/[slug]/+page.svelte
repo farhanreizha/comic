@@ -1,31 +1,139 @@
 <script lang="ts">
+import { invalidate } from "$app/navigation";
 import { page } from "$app/state";
 import { genreLabel } from "$lib/genres";
 import { client } from "$lib/orpc";
-import { shelf } from "$lib/shelf";
 import { m } from "$paraglide/messages.js";
 import { ENV } from "../../../env";
 
-// Comic, chapters, rating, comments come from the server load. Only the
-// interactive bits (shelf toggle, follow control) stay client-side.
+// Comic, chapters, rating, comments, shelf + follow initial state come from
+// the server load. Client state only mirrors the server after a mutation.
 let { data } = $props();
 
 const detail = $derived(data.comic);
 const slug = $derived(String(page.params.slug));
 const signedIn = $derived(data.signedIn);
 
-const saved = $derived($shelf.includes(detail.id));
-
-// No is-following read path exists yet; the CONFLICT from follow tells us.
-let following = $state(false);
-async function toggleFollow() {
+// svelte-ignore state_referenced_locally -- initial server state, by design
+let saved = $state(data.saved);
+let saving = $state(false);
+let saveError = $state(false);
+async function toggleSave() {
+	if (saving) return;
+	saving = true;
+	const was = saved;
+	saved = !was;
+	saveError = false;
 	try {
-		if (following)
+		if (was) await client.reading.unsaveComic({ comicId: detail.id });
+		else await client.reading.saveComic({ comicId: detail.id });
+	} catch {
+		saved = was; // failed mutation reverts
+		saveError = true;
+	} finally {
+		saving = false;
+	}
+}
+
+// svelte-ignore state_referenced_locally -- initial server state, by design
+let following = $state(data.following);
+let followingBusy = $state(false);
+let followError = $state(false);
+async function toggleFollow() {
+	if (followingBusy) return;
+	followingBusy = true;
+	const was = following;
+	following = !was;
+	followError = false;
+	try {
+		if (was)
 			await client.social.unfollow({ creatorId: detail.creator.id });
 		else await client.social.follow({ creatorId: detail.creator.id });
-		following = !following;
+	} catch {
+		following = was; // failed mutation reverts
+		followError = true;
+	} finally {
+		followingBusy = false;
+	}
+}
+
+// Posting a comment re-runs the server load, so the list stays the
+// server-rendered truth rather than a client-side copy.
+let commentBusy = $state(false);
+let commentError = $state(false);
+async function submitComment(e: SubmitEvent) {
+	e.preventDefault();
+	if (commentBusy) return;
+	const form = e.target as HTMLFormElement;
+	const body = new FormData(form).get("body");
+	if (typeof body !== "string" || !body.trim()) return;
+	commentBusy = true;
+	commentError = false;
+	try {
+		await client.social.comment({ comicId: detail.id, body: body.trim() });
+		form.reset();
+		await invalidate((url) => url.pathname === `/comic/${slug}`);
+	} catch {
+		commentError = true;
+	} finally {
+		commentBusy = false;
+	}
+}
+
+// svelte-ignore state_referenced_locally -- initial server state, by design
+let rating = $state(data.rating);
+const myRating = $derived(rating?.userValue?.toString() ?? "");
+let rateBusy = $state(false);
+let rateError = $state(false);
+async function submitRating(e: Event) {
+	const value = Number((e.target as HTMLSelectElement).value);
+	if (!Number.isInteger(value) || value < 1 || value > 5) return;
+	rateBusy = true;
+	rateError = false;
+	try {
+		rating = await client.social.rate({ comicId: detail.id, value });
+	} catch {
+		rateError = true;
+	} finally {
+		rateBusy = false;
+	}
+}
+
+const REPORT_REASONS = [
+	["sexual_content", m.report_reason_sexual_content()],
+	["copyright", m.report_reason_copyright()],
+	["harassment", m.report_reason_harassment()],
+	["spam", m.report_reason_spam()],
+	["other", m.report_reason_other()],
+] as const;
+
+/** Per-target feedback for report forms: "done" | "already" | "failed". */
+let reportMsg = $state<Record<string, "done" | "already" | "failed">>({});
+async function submitReport(
+	e: SubmitEvent,
+	targetType: "comic" | "comment",
+	targetId: string,
+) {
+	e.preventDefault();
+	if (reportMsg[targetId] === "done") return;
+	const form = e.target as HTMLFormElement;
+	const reason = String(new FormData(form).get("reason"));
+	try {
+		await client.social.report({
+			// The server enum-gates this; the select can only produce one of five.
+			targetType,
+			targetId,
+			reason: reason as
+				| "sexual_content"
+				| "copyright"
+				| "harassment"
+				| "spam"
+				| "other",
+		});
+		reportMsg[targetId] = "done";
 	} catch (error) {
-		if ((error as { code?: string }).code === "CONFLICT") following = true;
+		reportMsg[targetId] =
+			(error as { code?: string }).code === "CONFLICT" ? "already" : "failed";
 	}
 }
 
@@ -39,6 +147,43 @@ const firstChapter = $derived(chapters[0] ?? null);
 <svelte:head>
 	<title>{detail.title} — komik</title>
 </svelte:head>
+
+{#snippet reportForm(targetType: "comic" | "comment", targetId: string)}
+	{#if signedIn}
+		<details class="inline-block text-xs">
+			<summary class="cursor-pointer list-none text-text-2 hover:text-accent">
+				{m.detail_report()}
+			</summary>
+			<form
+				class="mt-1 flex items-center gap-1"
+				onsubmit={(e) => submitReport(e, targetType, targetId)}
+			>
+				<label class="sr-only" for={`report-${targetId}`}>
+					{m.detail_report_reason()}
+				</label>
+				<select
+					id={`report-${targetId}`}
+					name="reason"
+					class="border border-line bg-bg px-1 py-0.5 text-text-2"
+				>
+					{#each REPORT_REASONS as [value, label] (value)}
+						<option {value}>{label}</option>
+					{/each}
+				</select>
+				<button type="submit" class="border border-line px-2 py-0.5 text-text-2 hover:border-accent hover:text-accent">
+					{m.detail_report_submit()}
+				</button>
+				{#if reportMsg[targetId] === "done"}
+					<span class="text-text-2">{m.detail_report_done()}</span>
+				{:else if reportMsg[targetId] === "already"}
+					<span class="text-text-2">{m.detail_report_already()}</span>
+				{:else if reportMsg[targetId] === "failed"}
+					<span class="text-accent">{m.error_generic()}</span>
+				{/if}
+			</form>
+		</details>
+	{/if}
+{/snippet}
 
 <div class="mx-auto max-w-6xl px-4 py-8">
 	<a href="/" class="eyebrow">{m.detail_back()}</a>
@@ -60,7 +205,10 @@ const firstChapter = $derived(chapters[0] ?? null);
 			<h1 class="font-display text-3xl font-bold leading-tight text-ink sm:text-4xl">
 				{detail.title}
 			</h1>
-			<p class="mt-1 text-text-2">{m.detail_by({ name: detail.creator.name })}</p>
+			<div class="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+				<p class="text-text-2">{m.detail_by({ name: detail.creator.name })}</p>
+				{@render reportForm("comic", detail.id)}
+			</div>
 
 			<div class="mt-3 flex flex-wrap gap-1">
 				{#each detail.genres as g (g)}
@@ -71,17 +219,38 @@ const firstChapter = $derived(chapters[0] ?? null);
 			</div>
 
 			<p class="mt-4 text-sm text-text-2">
-				{#if data.rating}
-					{#if data.rating.count > 0}
+				{#if rating}
+					{#if rating.count > 0}
 						{m.detail_rating({
-							avg: data.rating.average?.toFixed(1) ?? "–",
-							count: data.rating.count,
+							avg: rating.average?.toFixed(1) ?? "–",
+							count: rating.count,
 						})}
 					{:else}
 						{m.detail_rating_none()}
 					{/if}
 				{/if}
 			</p>
+
+			{#if signedIn}
+				<div class="mt-2 flex flex-wrap items-center gap-2 text-sm">
+					<label for="my-rating" class="text-text-2">{m.detail_rate_label()}</label>
+					<select
+						id="my-rating"
+						class="border border-line bg-bg px-2 py-1 text-ink disabled:text-decor"
+						value={myRating}
+						disabled={rateBusy}
+						onchange={submitRating}
+					>
+						<option value="" disabled>{m.detail_rate_placeholder()}</option>
+						{#each [1, 2, 3, 4, 5] as v (v)}
+							<option value={String(v)}>{v}</option>
+						{/each}
+					</select>
+					{#if rateError}
+						<span class="text-accent">{m.error_generic()}</span>
+					{/if}
+				</div>
+			{/if}
 
 			<div class="mt-4 flex flex-wrap gap-2">
 				{#if firstChapter}
@@ -92,26 +261,41 @@ const firstChapter = $derived(chapters[0] ?? null);
 						{m.detail_read_first()}
 					</a>
 				{/if}
-				<button
-					type="button"
-					onclick={() => shelf.toggle(detail.id)}
-					class="border px-5 py-2 text-sm font-semibold transition-colors {saved
-						? 'border-accent text-accent'
-						: 'border-line text-text-2 hover:border-accent hover:text-accent'}"
-				>
-					{saved ? m.detail_saved() : m.detail_save()}
-				</button>
 				{#if signedIn}
 					<button
 						type="button"
+						onclick={toggleSave}
+						disabled={saving}
+						class="border px-5 py-2 text-sm font-semibold transition-colors disabled:opacity-60 {saved
+							? 'border-accent text-accent'
+							: 'border-line text-text-2 hover:border-accent hover:text-accent'}"
+					>
+						{saved ? m.detail_saved() : m.detail_save()}
+					</button>
+					{#if saveError}
+						<span
+							class="self-center text-xs text-accent"
+							role="alert"
+						>{m.error_generic()}</span>
+					{/if}
+					<button
+						type="button"
 						onclick={toggleFollow}
-						class="border px-5 py-2 text-sm font-semibold transition-colors {following
+						disabled={followingBusy}
+						class="border px-5 py-2 text-sm font-semibold transition-colors disabled:opacity-60 {following
 							? 'border-accent text-accent'
 							: 'border-line text-text-2 hover:border-accent hover:text-accent'}"
 					>
 						{following ? m.detail_following() : m.detail_follow()}
 					</button>
+					{#if followError}
+						<span
+							class="self-center text-xs text-accent"
+							role="alert"
+						>{m.error_generic()}</span>
+					{/if}
 				{:else}
+					<span class="self-center text-xs text-text-2">{m.detail_save_unavailable()}</span>
 					<span class="self-center text-xs text-text-2">{m.detail_follow_unavailable()}</span>
 				{/if}
 			</div>
@@ -149,18 +333,49 @@ const firstChapter = $derived(chapters[0] ?? null);
 	<section class="mt-10">
 		<h2 class="eyebrow">{m.detail_comments()}</h2>
 		{#if !signedIn}
-			<p class="mt-2 text-sm text-text-2">{m.error_unauthenticated()}</p>
-		{:else if !data.comments || data.comments.items.length === 0}
-			<p class="mt-2 text-sm text-text-2">{m.detail_comments_empty()}</p>
+			<p class="mt-2 text-sm text-text-2">
+				<a href="/login" class="text-accent hover:underline">{m.detail_comments_signin_prompt()}</a>
+			</p>
 		{:else}
-			<ul class="mt-3 space-y-4 border-t border-line pt-4">
-				{#each data.comments.items as c (c.id)}
-					<li class="text-sm">
-						<p class="font-semibold text-ink">{c.author.name}</p>
-						<p class="mt-0.5 whitespace-pre-line text-ink">{c.body}</p>
-					</li>
-				{/each}
-			</ul>
+			<form class="mt-3 space-y-2" onsubmit={submitComment}>
+				<label class="sr-only" for="comment-body">{m.detail_comments()}</label>
+				<textarea
+					id="comment-body"
+					name="body"
+					rows="3"
+					required
+					maxlength="2000"
+					class="w-full border border-line bg-bg p-2 text-sm text-ink placeholder:text-decor"
+					placeholder={m.detail_comment_placeholder()}
+				></textarea>
+				<div class="flex items-center gap-3">
+					<button
+						type="submit"
+						disabled={commentBusy}
+						class="border border-line px-4 py-1.5 text-sm font-semibold text-text-2 transition-colors hover:border-accent hover:text-accent disabled:opacity-60"
+					>
+						{m.detail_comment_submit()}
+					</button>
+					{#if commentError}
+						<span class="text-xs text-accent" role="alert">{m.error_generic()}</span>
+					{/if}
+				</div>
+			</form>
+			{#if !data.comments || data.comments.items.length === 0}
+				<p class="mt-2 text-sm text-text-2">{m.detail_comments_empty()}</p>
+			{:else}
+				<ul class="mt-4 space-y-4 border-t border-line pt-4">
+					{#each data.comments.items as c (c.id)}
+						<li class="text-sm">
+							<div class="flex flex-wrap items-baseline gap-x-3">
+								<p class="font-semibold text-ink">{c.author.name}</p>
+								{@render reportForm("comment", c.id)}
+							</div>
+							<p class="mt-0.5 whitespace-pre-line text-ink">{c.body}</p>
+						</li>
+					{/each}
+				</ul>
+			{/if}
 		{/if}
 	</section>
 </div>

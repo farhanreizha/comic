@@ -70,6 +70,17 @@ assert_contains "browse filtered" "$WEB/?q=$QURL"          200 "$TITLE"
 assert_contains "detail /comic"   "$WEB/comic/$SLUG"   200 "$TITLE"
 assert_contains "detail chapters" "$WEB/comic/$SLUG"   200 '/read/'
 
+# ---- detail signed-out: shelf/follow controls show their initial state ------
+# No cookie is sent, so this is the signed-out variant: the page must render
+# the sign-in prompts for save + follow, the comments prompt, and the report
+# affordance must be absent (report is a signed-in action). The interactive
+# toggles live behind {#if signedIn}, so their labels must not appear either.
+assert_contains "detail save prompt"   "$WEB/comic/$SLUG" 200 "Masuk untuk simpan ke perpustakaan."
+assert_contains "detail follow prompt" "$WEB/comic/$SLUG" 200 "Masuk untuk mengikuti kreator ini."
+assert_contains "detail comments prompt" "$WEB/comic/$SLUG" 200 "Masuk untuk membaca dan menulis komentar."
+assert_absent   "detail no save toggle" "$WEB/comic/$SLUG" ">Tersimpan<"
+assert_absent   "detail no report form" "$WEB/comic/$SLUG" "report-"
+
 # ---- reader: header + first page <img>, no loading placeholder --------------
 if [ -n "$CHAPTER" ]; then
 	assert_contains "reader title"  "$WEB/read/$CHAPTER" 200 "${CHTITLE:-Chapter}"

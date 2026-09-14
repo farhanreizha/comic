@@ -2,7 +2,11 @@ import { error } from "@sveltejs/kit";
 import { serverClient } from "$lib/orpc.server";
 import type { PageServerLoad } from "./$types";
 
-/** Comic + chapters + (for a viewer) rating summary + comments, server-rendered. */
+/**
+ * Comic + chapters + (for a viewer) shelf/follow/rating/comments, all
+ * server-rendered. The booleans below are the initial state the toggles
+ * start from — the truth comes from the server, never from localStorage.
+ */
 export const load: PageServerLoad = async ({ params, cookies }) => {
 	const client = serverClient(cookies);
 	let read: Awaited<ReturnType<typeof client.reading.read>>;
@@ -22,7 +26,7 @@ export const load: PageServerLoad = async ({ params, cookies }) => {
 	const me = await client.reading.me().catch(() => null);
 	const signedIn = Boolean(me?.signedIn);
 
-	const [rating, comments] = signedIn
+	const [rating, comments, saved, following] = signedIn
 		? await Promise.all([
 				client.social
 					.ratingSummary({ comicId: read.comic.id })
@@ -30,8 +34,12 @@ export const load: PageServerLoad = async ({ params, cookies }) => {
 				client.social
 					.listComments({ comicId: read.comic.id, limit: 20 })
 					.catch(() => null),
+				client.reading.isSaved({ comicId: read.comic.id }).catch(() => false),
+				client.social
+					.isFollowing({ creatorId: read.comic.creator.id })
+					.catch(() => false),
 			])
-		: [null, null];
+		: [null, null, false, false];
 
 	return {
 		comic: read.comic,
@@ -40,5 +48,7 @@ export const load: PageServerLoad = async ({ params, cookies }) => {
 		signedIn,
 		rating,
 		comments,
+		saved,
+		following,
 	};
 };
