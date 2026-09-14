@@ -1,24 +1,24 @@
 <script lang="ts">
-	import { createQuery } from "@tanstack/svelte-query";
-	import { orpc } from "$lib/orpc";
-	import { m } from "$paraglide/messages.js";
-	import ComicCard from "$components/ComicCard.svelte";
-	import { ENV } from "../../env";
+import { createQuery } from "@tanstack/svelte-query";
+import ComicCard from "$components/ComicCard.svelte";
+import { orpc } from "$lib/orpc";
+import { m } from "$paraglide/messages.js";
+import { ENV } from "../../env";
 
-	const me = createQuery(() =>
-		orpc.reading.me.queryOptions({ staleTime: 60_000 }),
-	);
-	const signedIn = $derived(Boolean(me.data?.signedIn));
+const me = createQuery(() =>
+	orpc.reading.me.queryOptions({ staleTime: 60_000 }),
+);
+const signedIn = $derived(Boolean(me.data?.signedIn));
 
-	const shelfQuery = createQuery(() =>
-		orpc.reading.shelf.queryOptions({ enabled: signedIn }),
-	);
+const shelfQuery = createQuery(() =>
+	orpc.reading.shelf.queryOptions({ enabled: signedIn }),
+);
 
-	const saved = $derived(shelfQuery.data?.saved ?? []);
-	const continuing = $derived(shelfQuery.data?.continueReading ?? []);
+const saved = $derived(shelfQuery.data?.saved ?? []);
+const continuing = $derived(shelfQuery.data?.continueReading ?? []);
 
-	const cover = (url: string | null) =>
-		url ? `${ENV.PUBLIC_SERVER_URL}${url}` : null;
+const cover = (url: string | null) =>
+	url ? `${ENV.PUBLIC_SERVER_URL}${url}` : null;
 </script>
 
 <svelte:head>

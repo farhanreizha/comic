@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { getLocale, locales, setLocale } from "$paraglide/runtime.js";
-	import { m } from "$paraglide/messages.js";
+import { m } from "$paraglide/messages.js";
+import { getLocale, locales, setLocale } from "$paraglide/runtime.js";
 
-	function pick(locale: (typeof locales)[number]) {
-		// Default reload: a full document navigation so SSR text follows the
-		// cookie. `goto` has no `force` option in this Kit version.
-		void setLocale(locale);
-	}
+function pick(locale: (typeof locales)[number]) {
+	// Default reload: a full document navigation so SSR text follows the
+	// cookie. `goto` has no `force` option in this Kit version.
+	void setLocale(locale);
+}
 </script>
 
 <div
