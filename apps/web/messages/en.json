@@ -174,5 +174,15 @@
 	"admin_takedown_done": "Takedown status changed.",
 	"admin_takedown_failed": "Failed to change takedown status.",
 	"report_reason_none": "—",
-	"detail_add_chapter": "Add chapter"
+	"detail_add_chapter": "Add chapter",
+	"manage_edit": "Edit",
+	"manage_edit_submit": "Save changes",
+	"manage_saved": "Saved",
+	"manage_delete": "Delete comic",
+	"manage_delete_confirm": "Delete this comic with ALL its chapters and pages? This cannot be undone.",
+	"manage_visibility": "Visibility",
+	"manage_visibility_note": "Visibility alone never publishes a draft.",
+	"visibility_public": "Public",
+	"visibility_unlisted": "Unlisted",
+	"visibility_private": "Private"
 }

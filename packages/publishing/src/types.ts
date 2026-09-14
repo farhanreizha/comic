@@ -41,6 +41,16 @@ export type ComicDraft = {
 	visibility?: Visibility; // default private while draft
 };
 
+/** Metadata edit patch — absent keys stay as-is. Slug is NOT patchable:
+ * reading URLs are the public contract; title edits keep the old slug.
+ * visibility never touches status (decision #2: a draft stays a draft). */
+export type ComicPatch = {
+	title?: string;
+	synopsis?: string | null;
+	genres?: readonly Genre[];
+	visibility?: Visibility;
+};
+
 export type ChapterSource =
 	| { kind: "archive"; upload: Upload } // CBZ / ZIP
 	| { kind: "images"; uploads: readonly Upload[] }; // loose page images
@@ -120,6 +130,14 @@ export type ComicRef = {
 	coverUrl: string | null;
 };
 
+/** Normalised patch the adapters persist (absent keys stay as-is). */
+export type ComicPatchData = {
+	title?: string;
+	synopsis?: string | null;
+	genres?: Genre[];
+	visibility?: Visibility;
+};
+
 export type PublishingDataPort = {
 	findComic(id: string): Promise<ComicRef | null>;
 	slugTaken(slug: string): Promise<boolean>;
@@ -137,6 +155,14 @@ export type PublishingDataPort = {
 		pages: NewPageRow[],
 	): Promise<{ replacedKeys: string[]; chapter: ChapterSummary }>;
 	findChapter(id: string): Promise<{ id: string; comicId: string } | null>;
+	/** Transactional: applies the patch to the comic row, returns the fresh
+	 * card (empty patch = current card unchanged). NOT_FOUND-coded error
+	 * when the row vanished under us. */
+	updateComic(id: string, patch: ComicPatchData): Promise<ComicCard>;
+	/** Transactional: deletes the comic (DB cascade removes chapters/pages/
+	 * comments/ratings/shelf rows) and returns every page storageKey that
+	 * existed — the caller deletes those bytes AFTER commit (invariant 5). */
+	deleteComic(id: string): Promise<{ storageKeys: string[] }>;
 };
 
 export type ChapterFilesPort = {
@@ -150,4 +176,13 @@ export type ChapterFilesPort = {
 export type Publishing = {
 	createComic(viewer: Viewer, draft: ComicDraft): Promise<ComicCard>;
 	ingestChapter(viewer: Viewer, input: IngestInput): Promise<ChapterSummary>;
+	/** Owner or admin only. Never changes status — visibility edits on a
+	 * draft stay invisible to readers until a publish path exists. */
+	updateComic(
+		viewer: Viewer,
+		comicId: string,
+		patch: ComicPatch,
+	): Promise<ComicCard>;
+	/** Owner or admin only. Cascade: chapters + pages rows and their bytes. */
+	deleteComic(viewer: Viewer, comicId: string): Promise<{ id: string }>;
 };

@@ -1,8 +1,9 @@
 <script lang="ts">
-import { invalidate } from "$app/navigation";
+import { goto, invalidate } from "$app/navigation";
 import { page } from "$app/state";
-import { genreLabel } from "$lib/genres";
+import { GENRES, type Genre, genreLabel } from "$lib/genres";
 import { client } from "$lib/orpc";
+import { errorText, mapWriteError } from "$lib/write-ui";
 import { m } from "$paraglide/messages.js";
 import { ENV } from "../../../env";
 
@@ -46,8 +47,7 @@ async function toggleFollow() {
 	following = !was;
 	followError = false;
 	try {
-		if (was)
-			await client.social.unfollow({ creatorId: detail.creator.id });
+		if (was) await client.social.unfollow({ creatorId: detail.creator.id });
 		else await client.social.follow({ creatorId: detail.creator.id });
 	} catch {
 		following = was; // failed mutation reverts
@@ -142,6 +142,63 @@ const cover = $derived(
 );
 const chapters = $derived(data.chapters);
 const firstChapter = $derived(chapters[0] ?? null);
+
+/* ------------------------------------------- creator manage: edit + delete */
+let editing = $state(false);
+let editBusy = $state(false);
+let editMsg = $state<string | null>(null);
+let editOk = $state(false);
+// svelte-ignore state_referenced_locally -- prefill from server state, by design
+let editGenres = $state<Set<Genre>>(new Set(data.comic.genres));
+
+function toggleEditGenre(g: Genre) {
+	if (editGenres.has(g)) editGenres.delete(g);
+	else editGenres.add(g);
+}
+
+async function submitEdit(e: SubmitEvent) {
+	e.preventDefault();
+	if (editBusy) return;
+	const fd = new FormData(e.target as HTMLFormElement);
+	editBusy = true;
+	editMsg = null;
+	try {
+		await client.publishing.updateComic({
+			comicId: detail.id,
+			title: String(fd.get("title") ?? "").trim(),
+			synopsis: String(fd.get("synopsis") ?? "").trim() || null,
+			genres: [...editGenres],
+			visibility: String(fd.get("visibility") ?? "private") as
+				| "public"
+				| "unlisted"
+				| "private",
+		});
+		editOk = true;
+		editing = false;
+		// the card text is server truth — re-run the load instead of patching locally
+		await invalidate((url) => url.pathname === `/comic/${slug}`);
+	} catch (error) {
+		editMsg = errorText(mapWriteError(error));
+	} finally {
+		editBusy = false;
+	}
+}
+
+let deleteBusy = $state(false);
+let deleteMsg = $state<string | null>(null);
+async function submitDelete() {
+	if (deleteBusy) return;
+	if (!confirm(m.manage_delete_confirm())) return;
+	deleteBusy = true;
+	deleteMsg = null;
+	try {
+		await client.publishing.deleteComic({ comicId: detail.id });
+		await goto("/");
+	} catch (error) {
+		deleteMsg = errorText(mapWriteError(error));
+		deleteBusy = false;
+	}
+}
 </script>
 
 <svelte:head>
@@ -182,6 +239,105 @@ const firstChapter = $derived(chapters[0] ?? null);
 				{/if}
 			</form>
 		</details>
+	{/if}
+{/snippet}
+
+{#snippet managePanel()}
+	{#if data.canManage}
+		<div class="mt-4 border border-line bg-surface p-3">
+			<div class="flex flex-wrap items-center gap-2 text-sm">
+				<button
+					type="button"
+					class="border border-line px-3 py-1 font-semibold text-text-2 transition-colors hover:border-accent hover:text-accent"
+					onclick={() => {
+						editing = !editing;
+						editMsg = null;
+					}}
+				>
+					{m.manage_edit()}
+				</button>
+				<button
+					type="button"
+					class="border border-line px-3 py-1 font-semibold text-accent transition-colors hover:border-accent disabled:opacity-60"
+					onclick={submitDelete}
+					disabled={deleteBusy}
+				>
+					{m.manage_delete()}
+				</button>
+				{#if editOk}<span class="text-text-2">{m.manage_saved()}</span>{/if}
+				{#if deleteMsg}<span class="text-accent" role="alert">{deleteMsg}</span>{/if}
+			</div>
+			{#if editing}
+				<form class="mt-3 space-y-3" onsubmit={submitEdit}>
+					<div>
+						<label for="edit-title" class="eyebrow">{m.upload_comic_title()}</label>
+						<input
+							id="edit-title"
+							name="title"
+							required
+							maxlength="200"
+							value={detail.title}
+							class="mt-1 w-full border border-line bg-bg px-2 py-1.5 text-sm text-ink"
+						/>
+					</div>
+					<div>
+						<label for="edit-synopsis" class="eyebrow">{m.upload_comic_synopsis()}</label>
+						<textarea
+							id="edit-synopsis"
+							name="synopsis"
+							rows="3"
+							maxlength="5000"
+							class="mt-1 w-full border border-line bg-bg p-2 text-sm text-ink placeholder:text-decor"
+						>{data.synopsis ?? ""}</textarea>
+					</div>
+					<div>
+						<span class="eyebrow">{m.upload_comic_genres()}</span>
+						<div class="mt-1 flex flex-wrap gap-1">
+							{#each GENRES as g (g)}
+								<button
+									type="button"
+									onclick={() => toggleEditGenre(g)}
+									class="border px-1.5 py-0.5 text-[0.65rem] font-semibold tracking-wide uppercase {editGenres.has(g)
+										? 'border-accent text-accent'
+										: 'border-line text-text-2 hover:border-accent hover:text-accent'}"
+								>
+									{genreLabel(g)}
+								</button>
+							{/each}
+						</div>
+					</div>
+					<div>
+						<label for="edit-visibility" class="eyebrow">{m.manage_visibility()}</label>
+						<select
+							id="edit-visibility"
+							name="visibility"
+							class="mt-1 block w-full border border-line bg-bg px-2 py-1.5 text-sm text-ink"
+						>
+							<option value="public" selected={detail.visibility === "public"}>
+								{m.visibility_public()}
+							</option>
+							<option value="unlisted" selected={detail.visibility === "unlisted"}>
+								{m.visibility_unlisted()}
+							</option>
+							<option value="private" selected={detail.visibility === "private"}>
+								{m.visibility_private()}
+							</option>
+						</select>
+						<p class="mt-1 text-xs text-text-2">{m.manage_visibility_note()}</p>
+					</div>
+					<div class="flex items-center gap-3">
+						<button
+							type="submit"
+							disabled={editBusy}
+							class="bg-accent px-4 py-1.5 text-sm font-semibold text-bg transition-colors hover:bg-accent-dk disabled:opacity-60"
+						>
+							{m.manage_edit_submit()}
+						</button>
+						{#if editMsg}<span class="text-xs text-accent" role="alert">{editMsg}</span>{/if}
+					</div>
+				</form>
+			{/if}
+		</div>
 	{/if}
 {/snippet}
 
@@ -299,6 +455,8 @@ const firstChapter = $derived(chapters[0] ?? null);
 					<span class="self-center text-xs text-text-2">{m.detail_follow_unavailable()}</span>
 				{/if}
 			</div>
+
+			{@render managePanel()}
 
 			<section class="mt-8">
 				<h2 class="eyebrow">{m.detail_synopsis()}</h2>

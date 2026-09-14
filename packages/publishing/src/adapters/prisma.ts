@@ -186,5 +186,66 @@ export function createPrismaPublishingData(db: Database): PublishingDataPort {
 			});
 			return row;
 		},
+		async updateComic(id, patch) {
+			try {
+				const data: Record<string, unknown> = {};
+				if (patch.title !== undefined) data.title = patch.title;
+				if (patch.synopsis !== undefined) data.synopsis = patch.synopsis;
+				if (patch.genres !== undefined) {
+					data.genres = patch.genres.map((g) => (GENRE_TO_DB[g] ?? g) as never);
+				}
+				if (patch.visibility !== undefined) {
+					data.visibility = patch.visibility as never;
+				}
+				const updated = await db.comic.update({
+					where: { id },
+					data,
+					include: {
+						owner: { select: { id: true, name: true } },
+						_count: { select: { chapters: true } },
+					},
+				});
+				return {
+					id: updated.id,
+					slug: updated.slug,
+					title: updated.title,
+					coverUrl: updated.coverUrl,
+					creator: { id: updated.owner.id, name: updated.owner.name },
+					genres: updated.genres.map((g) => (GENRE_FROM_DB[g] ?? g) as Genre),
+					chapterCount: updated._count.chapters,
+					visibility: updated.visibility as ComicCard["visibility"],
+					status: updated.status as ComicCard["status"],
+					updatedAt: updated.updatedAt,
+				};
+			} catch (error) {
+				// P2025 = row not found (deleted under us) — surface as NOT_FOUND.
+				if ((error as { code?: string }).code === "P2025") {
+					const err = new Error("comic not found");
+					(err as { code?: string }).code = "NOT_FOUND";
+					throw err;
+				}
+				if (isConflict(error)) conflict();
+				throw error;
+			}
+		},
+		async deleteComic(id) {
+			try {
+				return await db.$transaction(async (tx) => {
+					const pages = await tx.page.findMany({
+						where: { chapter: { comicId: id } },
+						select: { storageKey: true },
+					});
+					await tx.comic.delete({ where: { id } });
+					return { storageKeys: pages.map((p) => p.storageKey) };
+				});
+			} catch (error) {
+				if ((error as { code?: string }).code === "P2025") {
+					const err = new Error("comic not found");
+					(err as { code?: string }).code = "NOT_FOUND";
+					throw err;
+				}
+				throw error;
+			}
+		},
 	};
 }
