@@ -133,6 +133,11 @@ export function createAdmin(deps: {
 			});
 		},
 
+		async myApplication(viewer) {
+			const userId = currentUserId(viewer);
+			return await data.findLatestApplication(userId);
+		},
+
 		async listApplications(viewer, input) {
 			adminId(viewer);
 			assertWindowInput(input.status, APPLICATION_STATUSES);

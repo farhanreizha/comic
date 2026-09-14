@@ -146,5 +146,8 @@ export const readingRouter = {
 	me: o.handler(({ context }) => ({
 		signedIn: context.viewer.kind === "user",
 		role: context.viewer.kind === "user" ? context.viewer.role : null,
+		// The id lets the upload page pick its own comics out of browse
+		// (creator/admin scope includes public of others).
+		id: context.viewer.kind === "user" ? context.viewer.id : null,
 	})),
 };

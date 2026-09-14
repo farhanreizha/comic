@@ -16,6 +16,7 @@
 	},
 	"dependencies": {
 		"@comic/api": "workspace:*",
+		"@comic/publishing": "workspace:*",
 		"@fontsource-variable/manrope": "^5.3.0",
 		"@fontsource/fraunces": "^5.3.0",
 		"@orpc/client": "catalog:",

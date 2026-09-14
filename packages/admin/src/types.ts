@@ -155,6 +155,8 @@ export type Admin = {
 			sample?: SampleUpload;
 		},
 	): Promise<ApplicationView>;
+	/** The applicant's own latest application — the status card on /creator/apply. */
+	myApplication(viewer: Viewer): Promise<ApplicationView | null>;
 	listApplications(
 		viewer: Viewer,
 		input: { status?: ApplicationStatus; cursor?: string },

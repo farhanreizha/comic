@@ -8,6 +8,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 
+import { adminSamplesApp } from "./admin-samples";
 import { createContext } from "./context";
 import { env } from "./env.server";
 import { pagesApp } from "./pages";
@@ -31,6 +32,7 @@ app.on(["POST", "GET"], "/api/auth/*", async (c) => auth.handler(c.req.raw));
 
 app.route("/", pagesApp);
 app.route("/", publishingApp);
+app.route("/", adminSamplesApp);
 
 export const apiHandler = new OpenAPIHandler(appRouter, {
 	plugins: [

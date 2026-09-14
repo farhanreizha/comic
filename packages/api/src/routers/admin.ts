@@ -81,6 +81,20 @@ export const adminRouter = {
 			}),
 		),
 
+	/** The viewer's own latest application (status card on /creator/apply). */
+	myApplication: o.handler(async ({ context }) =>
+		crossSeam(async () => {
+			const found = await adminIn(context.db, context.storage).myApplication(
+				context.viewer,
+			);
+			if (!found) return null;
+			// The storage key is an internal handle; the UI reaches bytes via
+			// the admin-only sample download route, never the key itself.
+			const { sampleKey: _omit, ...rest } = found;
+			return rest;
+		}),
+	),
+
 	listApplications: adminProcedure
 		.input(
 			z.object({
