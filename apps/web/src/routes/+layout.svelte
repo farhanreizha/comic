@@ -8,7 +8,7 @@
 	import UserMenu from "$components/UserMenu.svelte";
 	import LocaleSwitcher from "$components/LocaleSwitcher.svelte";
 
-	const { children } = $props();
+	const { children, data } = $props();
 
 	// The reader wears its own chrome — keep the app header off that route.
 	const inReader = $derived(page.url.pathname.startsWith("/read/"));
@@ -19,7 +19,7 @@
 		{@render children()}
 	{:else}
 		<div class="grid min-h-svh grid-rows-[auto_1fr_auto]">
-			<Header />
+			<Header role={data.role} signedIn={data.signedIn} />
 			<main>
 				{@render children()}
 			</main>

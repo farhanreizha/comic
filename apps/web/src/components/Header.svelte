@@ -1,12 +1,14 @@
 <script lang="ts">
-	import { createQuery } from "@tanstack/svelte-query";
-	import { orpc } from "$lib/orpc";
 	import { m } from "$paraglide/messages.js";
 	import LocaleSwitcher from "./LocaleSwitcher.svelte";
 	import UserMenu from "./UserMenu.svelte";
 
-	const me = createQuery(() => orpc.reading.me.queryOptions({ staleTime: 60_000 }));
-	const role = $derived(me.data?.role ?? null);
+	/**
+	 * Role comes from the layout's server load, not a client query: the nav is
+	 * chrome and must be correct in the first paint (and visible to crawlers).
+	 */
+	let { role = null, signedIn = false }: { role?: string | null; signedIn?: boolean } =
+		$props();
 </script>
 
 <header class="sticky top-0 z-40 border-b border-line bg-bg/95 backdrop-blur">
@@ -20,7 +22,7 @@
 			<ul class="flex items-center gap-1 text-sm whitespace-nowrap">
 				<li><a href="/" class="rounded px-2.5 py-1.5 font-semibold text-text-2 hover:bg-surface/60 hover:text-ink">{m.nav_browse()}</a></li>
 				<li><a href="/?focus=search" class="rounded px-2.5 py-1.5 font-semibold text-text-2 hover:bg-surface/60 hover:text-ink">{m.nav_search()}</a></li>
-				{#if role}
+				{#if signedIn}
 					<li><a href="/library" class="rounded px-2.5 py-1.5 font-semibold text-text-2 hover:bg-surface/60 hover:text-ink">{m.nav_library()}</a></li>
 				{/if}
 				{#if role === "creator" || role === "admin"}
@@ -33,7 +35,7 @@
 		</nav>
 		<div class="ml-auto flex items-center gap-2">
 			<LocaleSwitcher />
-			<UserMenu />
+			<UserMenu {signedIn} />
 		</div>
 	</div>
 </header>

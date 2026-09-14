@@ -18,6 +18,10 @@ const genre = $derived(
 );
 const cursor = $derived(page.url.searchParams.get("cursor") ?? undefined);
 
+type CardLike = import("$components/ComicCard.svelte").CardComic;
+/** One catalogue page: exactly what the route's load returned, minus layout keys. */
+type BrowsePage = { items: typeof data.items; nextCursor: string | null };
+
 const browse = createInfiniteQuery(() =>
 	orpc.reading.browse.infiniteOptions({
 		input: (nextCursor: string | undefined) => ({
@@ -27,9 +31,9 @@ const browse = createInfiniteQuery(() =>
 			limit: 20,
 		}),
 		initialPageParam: cursor,
-		getNextPageParam: (last: typeof data) => last.nextCursor ?? undefined,
+		getNextPageParam: (last: BrowsePage) => last.nextCursor ?? undefined,
 		initialData: () => ({
-			pages: [data],
+			pages: [{ items: data.items, nextCursor: data.nextCursor }] as BrowsePage[],
 			pageParams: [cursor] as (string | undefined)[],
 		}),
 	}),
@@ -38,7 +42,6 @@ const browse = createInfiniteQuery(() =>
 const items = $derived(
 	(browse.data?.pages ?? []).flatMap((p) => p.items as CardLike[]),
 );
-type CardLike = import("$components/ComicCard.svelte").CardComic;
 
 let searchBox = $state("");
 $effect(() => {

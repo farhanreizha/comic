@@ -1,14 +1,24 @@
 <script lang="ts">
-	import { goto } from "$app/navigation";
+	import { goto, invalidateAll } from "$app/navigation";
 	import { authClient } from "$lib/auth-client";
 	import { m } from "$paraglide/messages.js";
+
+	/**
+	 * `signedIn` is the server's answer, so the auth controls are correct in the
+	 * first paint. The session query only supplies the display name once the
+	 * client hydrates — it never decides which variant renders.
+	 */
+	let { signedIn = false }: { signedIn?: boolean } = $props();
 
 	const sessionQuery = authClient.useSession();
 
 	async function handleSignOut() {
 		await authClient.signOut({
 			fetchOptions: {
-				onSuccess: () => goto("/"),
+				onSuccess: async () => {
+					await invalidateAll();
+					goto("/");
+				},
 				onError: (error) => {
 					console.error("Sign out failed:", error);
 				},
@@ -17,12 +27,10 @@
 	}
 </script>
 
-{#if $sessionQuery.isPending}
-	<div class="h-8 w-16 animate-pulse rounded bg-surface/60"></div>
-{:else if $sessionQuery.data?.user}
+{#if signedIn}
 	<div class="flex items-center gap-2">
-		<span class="hidden text-sm text-text-2 sm:inline" title={$sessionQuery.data.user.email}>
-			{$sessionQuery.data.user.name || $sessionQuery.data.user.email?.split("@")[0]}
+		<span class="hidden text-sm text-text-2 sm:inline" title={$sessionQuery.data?.user.email}>
+			{$sessionQuery.data?.user.name || $sessionQuery.data?.user.email?.split("@")[0] || ""}
 		</span>
 		<button
 			onclick={handleSignOut}
