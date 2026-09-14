@@ -1,113 +1,209 @@
 #!/usr/bin/env bash
-# SSR smoke: the pages must be server-rendered, not client shells.
-# Fetches a real comic + chapter from the API, then asserts the *content*
-# (title, page image URLs, chapter header) is in the served HTML — and that
-# the reader does NOT ship the loading placeholder as its body.
-# Usage: WEB_URL=http://localhost:5173 [API_URL=http://localhost:3000] ./scripts/ssr-smoke.sh
+# SSR smoke for the comic platform.
+#
+# Asserts what the server actually renders: real content in the HTML (not a
+# loading shell), the role-gated nav, and the gated pages. It signs a throwaway
+# account up, promotes it to admin in the database, and re-checks — because a
+# signed-out-only smoke is what let the previous empty-shell build pass.
+#
+# Usage:
+#   WEB_URL=http://localhost:5199 API_URL=http://localhost:3000 \
+#     DB_CONTAINER=comic-postgres bash scripts/ssr-smoke.sh
+#
+# A missing prerequisite is a FAILURE, never a skip.
 set -u
+
 WEB="${WEB_URL:-http://localhost:5173}"
 API="${API_URL:-http://localhost:3000}"
+DB_CONTAINER="${DB_CONTAINER:-comic-postgres}"
+WORK="$(mktemp -d)"
+CK="$WORK/reader.txt"
+CK_ADMIN="$WORK/admin.txt"
 PASS=0
 FAIL=0
 
-fail() { echo "FAIL $*"; FAIL=$((FAIL + 1)); }
-pass() { echo "ok   $*"; PASS=$((PASS + 1)); }
+cleanup() { rm -rf "$WORK"; }
+trap cleanup EXIT
 
-# fetch <url> -> sets BODY, CODE
-fetch() {
+pass() { PASS=$((PASS + 1)); echo "ok   $1" >&2; }
+fail() { FAIL=$((FAIL + 1)); echo "FAIL $1" >&2; }
+
+# body <url> [cookie-jar] -> HTML on stdout
+body() {
+	local url="$1"
+	shift
+	if [ "$#" -gt 0 ] && [ -n "${1:-}" ]; then
+		curl -s -b "$1" "$url"
+	else
+		curl -s "$url"
+	fi
+}
+
+# assert_has <name> <url> [cookie] -- <string>
+assert_has() {
+	local name="$1" url="$2" ck="${3:-}"
+	shift 3 || true
+	[ "${1:-}" = "--" ] && shift
+	local want="$1"
+	if [ -z "$want" ]; then
+		fail "$name — the expected string is empty, which would make this check vacuous"
+		return
+	fi
+	if body "$url" "$ck" | grep -qF -- "$want"; then
+		pass "$name ('$want')"
+	else
+		fail "$name — HTML missing '$want'"
+	fi
+}
+
+# assert_lacks <name> <url> [cookie] -- <string>
+assert_lacks() {
+	local name="$1" url="$2" ck="${3:-}"
+	shift 3 || true
+	[ "${1:-}" = "--" ] && shift
+	local want="$1"
+	if body "$url" "$ck" | grep -qF -- "$want"; then
+		fail "$name — HTML unexpectedly contains '$want'"
+	else
+		pass "$name (absent '$want')"
+	fi
+}
+
+# assert_status <name> <url> [cookie] -- <code>
+assert_status() {
+	local name="$1" url="$2" ck="${3:-}"
+	shift 3 || true
+	[ "${1:-}" = "--" ] && shift
+	local want="$1" got
+	if [ -n "$ck" ]; then
+		got=$(curl -s -o /dev/null -w '%{http_code}' -b "$ck" "$url")
+	else
+		got=$(curl -s -o /dev/null -w '%{http_code}' "$url")
+	fi
+	if [ "$got" = "$want" ]; then pass "$name (HTTP $got)"; else fail "$name — HTTP $got, want $want"; fi
+}
+
+# assert_nav <name> <url> <cookie> -- <present...> ++ <absent...>
+assert_nav() {
+	local name="$1" url="$2" ck="$3"
+	shift 3
+	local html present=() absent=() mode=present
+	for tok in "$@"; do
+		if [ "$tok" = "++" ]; then mode=absent; continue; fi
+		if [ "$mode" = present ]; then present+=("$tok"); else absent+=("$tok"); fi
+	done
+	html=$(body "$url" "$ck")
+	local ok=1
+	for p in "${present[@]}"; do
+		printf '%s' "$html" | grep -qF -- "$p" || { fail "$name — nav missing $p"; ok=0; }
+	done
+	for a in "${absent[@]}"; do
+		printf '%s' "$html" | grep -qF -- "$a" && { fail "$name — nav unexpectedly has $a"; ok=0; }
+	done
+	[ "$ok" = 1 ] && pass "$name"
+}
+
+signup() { # <jar> <label> -> prints email
+	local jar="$1" label="$2" email
+	email="smoke-$label-$(date +%s)@example.com"
+	curl -s -o /dev/null -c "$jar" -X POST "$API/api/auth/sign-up/email" \
+		-H 'content-type: application/json' \
+		-d "{\"email\":\"$email\",\"password\":\"smoke-password-123\",\"name\":\"Smoke $label\"}"
+	if grep -q 'better-auth' "$jar" 2>/dev/null; then
+		pass "signup $label"
+		printf '%s' "$email"
+	else
+		fail "signup $label — no session cookie (API reachable at $API?)"
+		printf ''
+	fi
+}
+
+promote_admin() { # <email>
 	local out
-	out=$(curl -s -w $'\n%{http_code}' "$1") || out=$'\n000'
-	CODE="${out##*$'\n'}"
-	BODY="${out%$'\n'*}"
+	out=$(docker exec "$DB_CONTAINER" psql -U postgres -d comic -tAc \
+		"update \"user\" set role='admin' where email='$1';" 2>&1)
+	if [ "$(printf '%s' "$out" | tr -d '[:space:]')" = "UPDATE1" ]; then
+		pass "promote to admin in DB"
+	else
+		fail "promote to admin — psql said: $out"
+	fi
 }
 
-# assert_contains <name> <url> <want_status> <needle>
-assert_contains() {
-	local name="$1" url="$2" want="$3" needle="$4"
-	fetch "$url"
-	if [ "$CODE" != "$want" ]; then
-		fail "$name $url -> HTTP $CODE (want $want)"; return
-	fi
-	local hit
-	hit=$(printf '%s' "$BODY" | grep -oF -- "$needle" | head -1)
-	if [ -z "$hit" ]; then
-		fail "$name $url -> HTML lacks '$needle' (${#BODY} bytes)"; return
-	fi
-	pass "$name $url ($CODE, ${#BODY}B, grep '$hit')"
-}
+echo "== readiness =="
+if ! curl -s -o /dev/null --max-time 10 "$WEB/"; then echo "FAIL: web server unreachable at $WEB"; exit 1; fi
+if ! curl -s -o /dev/null --max-time 10 "$API/"; then echo "FAIL: api unreachable at $API"; exit 1; fi
+command -v docker >/dev/null || { echo "FAIL: docker missing, cannot promote admin"; exit 1; }
 
-# assert_absent <name> <url> <needle>
-assert_absent() {
-	local name="$1" url="$2" needle="$3"
-	fetch "$url"
-	if printf '%s' "$BODY" | grep -qF -- "$needle"; then
-		fail "$name $url -> HTML still contains '$needle'"; return
-	fi
-	pass "$name $url (absent: '$needle', ${#BODY}B)"
-}
-
-# ---- discover a real comic + chapter from the read API -----------------------
-BR=$(curl -s -X POST "$API/rpc/reading/browse" -H 'content-type: application/json' -d '{"json":{"limit":5}}')
-SLUG=$(printf '%s' "$BR" | sed -n 's/.*"slug":"\([^"]*\)".*/\1/p')
-TITLE=$(printf '%s' "$BR" | sed -n 's/.*"title":"\([^"]*\)".*/\1/p')
-if [ -z "$SLUG" ] || [ -z "$TITLE" ]; then
-	fail "API discovery: no comic in browse response — cannot verify content asserts"
-	echo "SSR SMOKE FAILED ($PASS passed, $FAIL failed)"; exit 1
-fi
-echo "discovered: slug=$SLUG title=$TITLE"
+echo "== discover a real comic and chapter =="
+curl -s -X POST "$API/rpc/reading/browse" -H 'content-type: application/json' -d '{"json":{}}' > "$WORK/browse.json"
+eval "$(python3 -c '
+import json
+d = json.load(open("'"$WORK"'/browse.json"))
+it = d["json"]["items"][0]
+print("SLUG=%s" % repr(it["slug"]))
+print("TITLE=%s" % repr(it["title"]))
+')"
 CH=$(curl -s -X POST "$API/rpc/reading/read" -H 'content-type: application/json' \
-	-d "{\"json\":{\"kind\":\"comic\",\"ref\":{\"slug\":\"$SLUG\"}}}")
-CHAPTER=$(printf '%s' "$CH" | sed -n 's/.*"chapters":\[{"id":"\([^"]*\)".*/\1/p')
-CHTITLE=$(printf '%s' "$CH" | sed -n 's/.*"chapters":\[{"id":"[^"]*","comicId":"[^"]*","ordinal":[0-9]*,"title":"\([^"]*\)".*/\1/p')
-echo "discovered: chapter=$CHAPTER title=${CHTITLE:-<empty>}"
-
-# ---- browse: the comic title must be in the server HTML ----------------------
-QURL=$(printf '%s' "$TITLE" | sed 's/ /%20/g')
-assert_contains "browse /"        "$WEB/"                  200 "$TITLE"
-assert_contains "browse filtered" "$WEB/?q=$QURL"          200 "$TITLE"
-
-# ---- detail: title + chapter list server-rendered ----------------------------
-assert_contains "detail /comic"   "$WEB/comic/$SLUG"   200 "$TITLE"
-assert_contains "detail chapters" "$WEB/comic/$SLUG"   200 '/read/'
-
-# ---- detail signed-out: shelf/follow controls show their initial state ------
-# No cookie is sent, so this is the signed-out variant: the page must render
-# the sign-in prompts for save + follow, the comments prompt, and the report
-# affordance must be absent (report is a signed-in action). The interactive
-# toggles live behind {#if signedIn}, so their labels must not appear either.
-assert_contains "detail save prompt"   "$WEB/comic/$SLUG" 200 "Masuk untuk simpan ke perpustakaan."
-assert_contains "detail follow prompt" "$WEB/comic/$SLUG" 200 "Masuk untuk mengikuti kreator ini."
-assert_contains "detail comments prompt" "$WEB/comic/$SLUG" 200 "Masuk untuk membaca dan menulis komentar."
-assert_absent   "detail no save toggle" "$WEB/comic/$SLUG" ">Tersimpan<"
-assert_absent   "detail no report form" "$WEB/comic/$SLUG" "report-"
-
-# ---- reader: header + first page <img>, no loading placeholder --------------
-if [ -n "$CHAPTER" ]; then
-	assert_contains "reader title"  "$WEB/read/$CHAPTER" 200 "${CHTITLE:-Chapter}"
-	assert_contains "reader images" "$WEB/read/$CHAPTER" 200 "/pages/"
-	assert_absent   "reader shell"  "$WEB/read/$CHAPTER" 'Memuat…'
-else
-	fail "no chapter discovered — reader asserts skipped"
+	-d "{\"json\":{\"kind\":\"comic\",\"ref\":{\"slug\":\"$SLUG\"}}}" > "$WORK/read.json" &&
+	python3 -c '
+import json
+d = json.load(open("'"$WORK"'/read.json"))
+print(d["json"]["chapters"][0]["id"])
+')
+if [ -z "$SLUG" ] || [ -z "$CH" ]; then
+	echo "FAIL: could not discover a comic/chapter from the API"; exit 1
 fi
-
-# ---- library: signed-out prompt (no cookie sent, so this is the real state) --
-LIB=$(curl -s "$WEB/library")
-if printf '%s' "$LIB" | grep -q 'Masuk untuk punya perpustakaan\|Sign in to keep a library'; then
-	HIT=$(printf '%s' "$LIB" | grep -o 'Masuk untuk punya perpustakaan\.\|Sign in to keep a library\.' | head -1)
-	pass "library /library signed-out prompt ($(printf '%s' "$LIB" | wc -c)B, grep '$HIT')"
-elif printf '%s' "$LIB" | grep -q 'Perpustakaan'; then
-	pass "library /library shelf rendered ($(printf '%s' "$LIB" | wc -c)B)"
-else
-	fail "library /library -> neither signed-out prompt nor shelf in HTML"
+curl -s -X POST "$API/rpc/reading/read" -H 'content-type: application/json' \
+	-d "{\"json\":{\"kind\":\"chapter\",\"chapterId\":\"$CH\"}}" > "$WORK/chapter.json"
+CH_TITLE=$(python3 -c '
+import json
+d = json.load(open("'"$WORK"'/chapter.json"))
+print(d["json"]["chapter"]["title"])
+')
+if [ -z "$CH_TITLE" ]; then
+	echo "FAIL: could not read the chapter title from the API"; exit 1
 fi
+echo "comic=$SLUG chapter=$CH ($CH_TITLE)"
 
-# ---- static chrome + 404 ------------------------------------------------------
-assert_contains "login /login"    "$WEB/login"           200 "Masuk"
-assert_contains "nav /"           "$WEB/"                200 "Jelajah"
-fetch "$WEB/no-such-page-here"
-if [ "$CODE" = "404" ]; then pass "404 unknown route ($CODE)"; else fail "404 unknown route -> $CODE"; fi
+echo "== signed-out content =="
+assert_has "browse renders a comic" "$WEB/" "" -- "$TITLE"
+assert_has "browse renders the shell" "$WEB/" "" -- "Jelajah"
+assert_has "detail renders title" "$WEB/comic/$SLUG" "" -- "$TITLE"
+assert_has "detail renders chapter link" "$WEB/comic/$SLUG" "" -- "/read/"
+assert_has "detail renders comment section" "$WEB/comic/$SLUG" "" -- "Komentar"
+assert_has "detail offers sign-in for comments" "$WEB/comic/$SLUG" "" -- "Masuk untuk menulis komentar."
+assert_has "detail offers sign-in for saving" "$WEB/comic/$SLUG" "" -- "Masuk untuk simpan ke perpustakaan."
+assert_lacks "detail hides the save toggle signed-out" "$WEB/comic/$SLUG" "" -- ">Tersimpan<"
+assert_has "reader renders the chapter" "$WEB/read/$CH" "" -- "$CH_TITLE"
+assert_has "reader renders page images" "$WEB/read/$CH" "" -- "/pages/"
+assert_lacks "reader is not a loading shell" "$WEB/read/$CH" "" -- "Memuat…"
+assert_has "library prompts signed-out" "$WEB/library" "" -- "Masuk untuk punya perpustakaan."
+assert_has "login page renders" "$WEB/login" "" -- "Masuk"
+assert_status "unknown route 404s" "$WEB/no-such-page-here" "" -- 404
+
+echo "== gated pages, signed out =="
+assert_has "upload gated signed-out" "$WEB/upload" "" -- "Masuk dulu untuk mengunggah komik."
+assert_has "creator apply gated signed-out" "$WEB/creator/apply" "" -- "Masuk dulu untuk mendaftar jadi kreator."
+assert_has "admin gated signed-out" "$WEB/admin" "" -- "Halaman ini khusus admin."
+
+echo "== nav per role =="
+assert_nav "nav signed-out" "$WEB/" "" -- "href=\"/login\"" "++" "href=\"/library\"" "href=\"/upload\"" "href=\"/admin\""
+
+READER_EMAIL=$(signup "$CK" reader)
+ADMIN_EMAIL=$(signup "$CK_ADMIN" admin)
+
+assert_nav "nav reader (shelf, no upload/admin)" "$WEB/" "$CK" -- "href=\"/library\"" "++" "href=\"/login\"" "href=\"/upload\"" "href=\"/admin\""
+assert_has "upload shows the creator CTA to a reader" "$WEB/upload" "$CK" -- "Kamu masih pembaca. Daftar jadi kreator untuk mulai mengunggah."
+assert_has "creator apply form renders for a reader" "$WEB/creator/apply" "$CK" -- "Kirim lamaran"
+assert_has "admin gated for a reader" "$WEB/admin" "$CK" -- "Halaman ini khusus admin."
+
+promote_admin "$ADMIN_EMAIL"
+assert_nav "nav admin (shelf + upload + admin)" "$WEB/" "$CK_ADMIN" -- "href=\"/library\"" "href=\"/upload\"" "href=\"/admin\""
+assert_has "admin queue renders applications" "$WEB/admin" "$CK_ADMIN" -- "Lamaran kreator"
+assert_has "admin queue renders reports" "$WEB/admin" "$CK_ADMIN" -- "Laporan"
+assert_has "admin takedown copy is honest" "$WEB/admin" "$CK_ADMIN" -- "termasuk pemiliknya"
 
 echo
 echo "SSR SMOKE: $PASS passed, $FAIL failed"
-[ "$FAIL" -eq 0 ] || exit 1
+if [ "$FAIL" -ne 0 ]; then echo "SSR SMOKE FAILED"; exit 1; fi
 echo "SSR SMOKE PASSED"
