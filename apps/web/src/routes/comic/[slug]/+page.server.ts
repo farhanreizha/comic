@@ -1,0 +1,44 @@
+import { error } from "@sveltejs/kit";
+import { serverClient } from "$lib/orpc.server";
+import type { PageServerLoad } from "./$types";
+
+/** Comic + chapters + (for a viewer) rating summary + comments, server-rendered. */
+export const load: PageServerLoad = async ({ params, cookies }) => {
+	const client = serverClient(cookies);
+	let read: Awaited<ReturnType<typeof client.reading.read>>;
+	try {
+		read = await client.reading.read({
+			kind: "comic",
+			ref: { slug: params.slug },
+		});
+	} catch (cause) {
+		const code = (cause as { code?: string }).code;
+		if (code === "NOT_FOUND" || code === "UNAUTHORIZED")
+			error(404, "not found");
+		throw cause;
+	}
+	if (read.kind !== "comic") error(404, "not found");
+
+	const me = await client.reading.me().catch(() => null);
+	const signedIn = Boolean(me?.signedIn);
+
+	const [rating, comments] = signedIn
+		? await Promise.all([
+				client.social
+					.ratingSummary({ comicId: read.comic.id })
+					.catch(() => null),
+				client.social
+					.listComments({ comicId: read.comic.id, limit: 20 })
+					.catch(() => null),
+			])
+		: [null, null];
+
+	return {
+		comic: read.comic,
+		synopsis: read.synopsis,
+		chapters: read.chapters,
+		signedIn,
+		rating,
+		comments,
+	};
+};
