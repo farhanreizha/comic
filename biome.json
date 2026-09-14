@@ -29,6 +29,8 @@
 			"!**/.source",
 			"!**/.agents",
 			"!**/.hermes",
+			"!**/.paraglide",
+			"!**/src/paraglide",
 			"!**/convex/_generated"
 		]
 	},

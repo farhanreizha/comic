@@ -1,0 +1,15 @@
+{
+  "$schema": "https://inlang.com/schema/project-settings",
+  "baseLocale": "id",
+  "locales": [
+    "id",
+    "en"
+  ],
+  "modules": [
+    ".paraglide/plugin-message-format.js",
+    ".paraglide/plugin-m-function-matcher.js"
+  ],
+  "plugin.inlang.messageFormat": {
+    "pathPattern": "./messages/{locale}.json"
+  }
+}
