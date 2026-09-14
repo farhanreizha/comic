@@ -119,13 +119,17 @@ signup() { # <jar> <label> -> prints email
 }
 
 promote_admin() { # <email>
+	promote_role "$1" admin
+}
+
+promote_role() { # <email> <role>
 	local out
 	out=$(docker exec "$DB_CONTAINER" psql -U postgres -d comic -tAc \
-		"update \"user\" set role='admin' where email='$1';" 2>&1)
+		"update \"user\" set role='$2' where email='$1';" 2>&1)
 	if [ "$(printf '%s' "$out" | tr -d '[:space:]')" = "UPDATE1" ]; then
-		pass "promote to admin in DB"
+		pass "promote to $2 in DB"
 	else
-		fail "promote to admin — psql said: $out"
+		fail "promote to $2 — psql said: $out"
 	fi
 }
 
@@ -202,6 +206,30 @@ assert_nav "nav admin (shelf + upload + admin)" "$WEB/" "$CK_ADMIN" -- "href=\"/
 assert_has "admin queue renders applications" "$WEB/admin" "$CK_ADMIN" -- "Lamaran kreator"
 assert_has "admin queue renders reports" "$WEB/admin" "$CK_ADMIN" -- "Laporan"
 assert_has "admin takedown copy is honest" "$WEB/admin" "$CK_ADMIN" -- "termasuk pemiliknya"
+
+echo "== creator sees the real upload form =="
+CK_CREATOR="$WORK/creator.txt"
+CREATOR_EMAIL=$(signup "$CK_CREATOR" creator)
+if [ -n "$CREATOR_EMAIL" ]; then
+	promote_role "$CREATOR_EMAIL" creator
+	assert_nav "nav creator (shelf + upload, no admin)" "$WEB/" "$CK_CREATOR" -- "href=\"/library\"" "href=\"/upload\"" "++" "href=\"/admin\""
+	assert_has "creator sees the comic form" "$WEB/upload" "$CK_CREATOR" -- "Buat komik"
+	assert_lacks "creator no longer sees the reader CTA" "$WEB/upload" "$CK_CREATOR" -- "Kamu masih pembaca"
+	# Step 2 only renders once the creator owns a comic — so create one
+	# through the API and assert the chapter form appears.
+	SMOKE_TITLE="Smoke Comic $(date +%s)"
+	CREATED=$(curl -s -b "$CK_CREATOR" -X POST "$API/rpc/publishing/createComic" \
+		-H 'content-type: application/json' \
+		-d "{\"json\":{\"title\":\"$SMOKE_TITLE\",\"genres\":[\"action\"]}}")
+	if printf '%s' "$CREATED" | grep -qF "$SMOKE_TITLE"; then
+		pass "createComic through the API"
+	else
+		fail "createComic through the API — response: $(printf '%s' "$CREATED" | head -c 120)"
+	fi
+	assert_has "creator sees the chapter form once a comic exists" "$WEB/upload" "$CK_CREATOR" -- "Kirim bab"
+else
+	fail "creator checks — signup failed"
+fi
 
 echo
 echo "SSR SMOKE: $PASS passed, $FAIL failed"
