@@ -135,7 +135,7 @@ Ports, one per module, Prisma adapter for production plus an in-memory adapter f
 
 ## Invariants
 
-1. Every entry point requires an authenticated viewer except none — comments, ratings, follows and reports are all signed-in actions.
+1. Comment **writes** (`comment`, `rate`), follows and reports require an authenticated viewer. Comment **reads** (`listComments`) are public — ruling 2026-09-14: a comic an anonymous visitor may read has comments they may read; a comment on a comic the viewer cannot see is `NOT_FOUND`, and hidden comments stay invisible to everyone but admin.
 2. `comment` and `rate` require `canView(viewer, comic)` from `@comic/reading`. Commenting on a comic you cannot read is `NOT_FOUND`, not `FORBIDDEN` — the same hiding rule as the read path.
 3. A taken-down comic fails `canView` for everyone except admin. Reads, comments, ratings and follows all inherit that through the single decision function; nothing duplicates the rule.
 4. `deleteComment` allows the author or an admin; anyone else gets `FORBIDDEN`.

@@ -332,11 +332,7 @@ const firstChapter = $derived(chapters[0] ?? null);
 
 	<section class="mt-10">
 		<h2 class="eyebrow">{m.detail_comments()}</h2>
-		{#if !signedIn}
-			<p class="mt-2 text-sm text-text-2">
-				<a href="/login" class="text-accent hover:underline">{m.detail_comments_signin_prompt()}</a>
-			</p>
-		{:else}
+		{#if signedIn}
 			<form class="mt-3 space-y-2" onsubmit={submitComment}>
 				<label class="sr-only" for="comment-body">{m.detail_comments()}</label>
 				<textarea
@@ -361,21 +357,27 @@ const firstChapter = $derived(chapters[0] ?? null);
 					{/if}
 				</div>
 			</form>
-			{#if !data.comments || data.comments.items.length === 0}
-				<p class="mt-2 text-sm text-text-2">{m.detail_comments_empty()}</p>
-			{:else}
-				<ul class="mt-4 space-y-4 border-t border-line pt-4">
-					{#each data.comments.items as c (c.id)}
-						<li class="text-sm">
-							<div class="flex flex-wrap items-baseline gap-x-3">
-								<p class="font-semibold text-ink">{c.author.name}</p>
-								{@render reportForm("comment", c.id)}
-							</div>
-							<p class="mt-0.5 whitespace-pre-line text-ink">{c.body}</p>
-						</li>
-					{/each}
-				</ul>
-			{/if}
+		{:else}
+			<!-- The list below still renders — reads are public; the form is what a
+			     signed-out visitor lacks. -->
+			<p class="mt-2 text-sm text-text-2">
+				<a href="/login" class="text-accent hover:underline">{m.detail_comments_signin_prompt()}</a>
+			</p>
+		{/if}
+		{#if !data.comments || data.comments.items.length === 0}
+			<p class="mt-2 text-sm text-text-2">{m.detail_comments_empty()}</p>
+		{:else}
+			<ul class="mt-4 space-y-4 border-t border-line pt-4">
+				{#each data.comments.items as c (c.id)}
+					<li class="text-sm">
+						<div class="flex flex-wrap items-baseline gap-x-3">
+							<p class="font-semibold text-ink">{c.author.name}</p>
+							{@render reportForm("comment", c.id)}
+						</div>
+						<p class="mt-0.5 whitespace-pre-line text-ink">{c.body}</p>
+					</li>
+				{/each}
+			</ul>
 		{/if}
 	</section>
 </div>

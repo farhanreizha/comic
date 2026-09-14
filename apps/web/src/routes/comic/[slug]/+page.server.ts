@@ -26,20 +26,26 @@ export const load: PageServerLoad = async ({ params, cookies }) => {
 	const me = await client.reading.me().catch(() => null);
 	const signedIn = Boolean(me?.signedIn);
 
-	const [rating, comments, saved, following] = signedIn
-		? await Promise.all([
-				client.social
+	// Ruling 2026-09-14: comment reads are public. The list renders for
+	// anonymous too — only the write-side state (rating) stays signed-in.
+	const [comments, rating, saved, following] = await Promise.all([
+		client.social
+			.listComments({ comicId: read.comic.id, limit: 20 })
+			.catch(() => null),
+		signedIn
+			? client.social
 					.ratingSummary({ comicId: read.comic.id })
-					.catch(() => null),
-				client.social
-					.listComments({ comicId: read.comic.id, limit: 20 })
-					.catch(() => null),
-				client.reading.isSaved({ comicId: read.comic.id }).catch(() => false),
-				client.social
+					.catch(() => null)
+			: null,
+		signedIn
+			? client.reading.isSaved({ comicId: read.comic.id }).catch(() => false)
+			: false,
+		signedIn
+			? client.social
 					.isFollowing({ creatorId: read.comic.creator.id })
-					.catch(() => false),
-			])
-		: [null, null, false, false];
+					.catch(() => false)
+			: false,
+	]);
 
 	return {
 		comic: read.comic,

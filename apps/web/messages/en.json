@@ -93,7 +93,7 @@
 	"detail_rate_placeholder": "Pick a number",
 	"detail_comment_placeholder": "Write a comment…",
 	"detail_comment_submit": "Post comment",
-	"detail_comments_signin_prompt": "Sign in to read and write comments.",
+	"detail_comments_signin_prompt": "Sign in to write a comment.",
 	"report_reason_sexual_content": "Sexual content",
 	"report_reason_copyright": "Copyright",
 	"report_reason_harassment": "Harassment",

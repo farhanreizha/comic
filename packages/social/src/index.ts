@@ -132,8 +132,10 @@ export function createSocial(deps: {
 		},
 
 		async listComments(viewer, input) {
-			// Invariant 1: every entry point is a signed-in action.
-			currentUserId(viewer);
+			// Ruling 2026-09-14: reads follow the comic. A comic an anonymous
+			// visitor may read has comments they may read; writes
+			// (comment/rate/follow/report) stay signed-in. Hidden comments
+			// stay invisible to everyone but admin (invariant 5).
 			await viewableComicOrNotFound(comics, viewer, input.comicId);
 			const limit = Math.min(input.limit ?? DEFAULT_LIMIT, MAX_LIMIT);
 			if (!Number.isInteger(limit) || limit < 1) {

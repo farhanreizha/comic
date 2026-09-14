@@ -82,8 +82,45 @@ describe("social — interface tests (docs/design/social-admin.md)", () => {
 		).toBe("NO_ERROR");
 	});
 
+	// Test 2a — ruling 2026-09-14: comment READS are public; WRITES stay signed-in.
+	test("anonymous listComments works on a public comic; private → NOT_FOUND; hidden stays invisible", async () => {
+		const { social, data } = setup();
+		const posted = await social.comment(READER, {
+			comicId: "c-public",
+			body: "readable by anon",
+		});
+		const hidden = await social.comment(OTHER, {
+			comicId: "c-public",
+			body: "moderated",
+		});
+		data.comments.find((c) => c.id === hidden.id)!.hiddenAt = new Date();
+
+		const asAnon = await social.listComments(ANONYMOUS, {
+			comicId: "c-public",
+		});
+		expect(asAnon.items.map((i) => i.id)).toContain(posted.id);
+		expect(asAnon.items.map((i) => i.id)).not.toContain(hidden.id);
+		expect(asAnon.count).toBe(1); // hidden excluded for everyone but admin
+
+		expect(
+			await errorOf(() =>
+				social.listComments(ANONYMOUS, { comicId: "c-private" }),
+			),
+		).toBe("NOT_FOUND");
+		// A comment on a private comic must not leak even when the reader is
+		// the one listing: the hiding rule is the comic's, not the comment's.
+		await social.comment(OWNER, { comicId: "c-private", body: "hidden room" });
+		// Writes stay signed-in: anonymous comment → UNAUTHENTICATED (test 2),
+		// asserted there. Here: anonymous may not flip anything either.
+		expect(
+			await errorOf(() =>
+				social.comment(ANONYMOUS, { comicId: "c-public", body: "x" }),
+			),
+		).toBe("UNAUTHENTICATED");
+	});
+
 	// Test 2
-	test("anonymous comment/rate/follow/report/listComments → UNAUTHENTICATED", async () => {
+	test("anonymous comment/rate/follow/report → UNAUTHENTICATED", async () => {
 		const { social } = setup();
 		expect(
 			await errorOf(() =>
@@ -107,11 +144,7 @@ describe("social — interface tests (docs/design/social-admin.md)", () => {
 				}),
 			),
 		).toBe("UNAUTHENTICATED");
-		expect(
-			await errorOf(() =>
-				social.listComments(ANONYMOUS, { comicId: "c-public" }),
-			),
-		).toBe("UNAUTHENTICATED");
+		// listComments moved to public reads (ruling 2026-09-14) — see test 2a.
 	});
 
 	// Test 3
