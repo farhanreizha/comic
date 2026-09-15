@@ -2,11 +2,16 @@
 import { createForm } from "@tanstack/svelte-form";
 import { z } from "zod";
 import { goto } from "$app/navigation";
-import { authClient } from "$lib/auth-client";
 import { Button, Input } from "$components/ui";
+import { authClient } from "$lib/auth-client";
+import { mapWriteError } from "$lib/write-ui";
 import { m } from "$paraglide/messages.js";
 
 let { switchToSignIn } = $props<{ switchToSignIn: () => void }>();
+
+// Better-auth answers a specific `message` ("User already exists");
+// only an error with none falls back to generic (H10).
+const formError = $state({ msg: "" });
 
 const validationSchema = z.object({
 	name: z.string().min(2, m.auth_name_min()),
@@ -17,6 +22,7 @@ const validationSchema = z.object({
 const form = createForm(() => ({
 	defaultValues: { name: "", email: "", password: "" },
 	onSubmit: async ({ value }) => {
+		formError.msg = "";
 		await authClient.signUp.email(
 			{
 				email: value.email,
@@ -28,7 +34,7 @@ const form = createForm(() => ({
 					goto("/library");
 				},
 				onError: (error) => {
-					console.log(error.error.message || m.error_generic());
+					formError.msg = mapWriteError(error.error).message;
 				},
 			},
 		);
@@ -113,6 +119,9 @@ type SubmitState = Pick<typeof form.state, "canSubmit" | "isSubmitting">;
 				</Button>
 			{/snippet}
 		</form.Subscribe>
+		{#if formError.msg}
+			<p class="text-sm text-accent" role="alert">{formError.msg}</p>
+		{/if}
 	</form>
 
 	<div class="mt-4 text-center">

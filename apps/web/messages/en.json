@@ -104,6 +104,7 @@
 	"err_not_found": "Not found.",
 	"err_invalid": "The submitted data is invalid.",
 	"err_too_large": "The file is too large.",
+	"err_too_large_limit": "The file is too large — limit {limit} per chapter.",
 	"err_limit": "Too many pages or archive entries.",
 	"err_conflict": "Already exists — this can't be repeated.",
 	"upload_title": "Upload",

@@ -135,7 +135,7 @@
 		<section class="mt-8">
 			<h2 class="eyebrow">{m.admin_apps_heading()}</h2>
 			{#if !data.applications}
-				<p class="mt-2 text-sm text-accent">{m.admin_load_failed()}</p>
+				<p class="mt-2 text-sm text-accent" role="alert">{m.admin_load_failed()}</p>
 			{:else if applications.length === 0}
 				<p class="mt-2 text-sm text-text-2">{m.admin_apps_empty()}</p>
 			{:else}
@@ -192,7 +192,7 @@
 		<section class="mt-10">
 			<h2 class="eyebrow">{m.admin_reports_heading()}</h2>
 			{#if !data.reports}
-				<p class="mt-2 text-sm text-accent">{m.admin_load_failed()}</p>
+				<p class="mt-2 text-sm text-accent" role="alert">{m.admin_load_failed()}</p>
 			{:else if reports.length === 0}
 				<p class="mt-2 text-sm text-text-2">{m.admin_reports_empty()}</p>
 			{:else}
@@ -305,7 +305,7 @@
 		<section class="mt-10">
 			<h2 class="eyebrow">{m.admin_takedown_heading()}</h2>
 			{#if !data.comics}
-				<p class="mt-2 text-sm text-accent">{m.admin_load_failed()}</p>
+				<p class="mt-2 text-sm text-accent" role="alert">{m.admin_load_failed()}</p>
 			{:else}
 				<p class="mt-2 text-xs text-text-2">{m.admin_takedown_warning()}</p>
 				<div class="mt-3 flex flex-wrap items-end gap-3 text-sm">

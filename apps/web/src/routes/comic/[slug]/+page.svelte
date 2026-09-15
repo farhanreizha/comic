@@ -18,19 +18,19 @@ const signedIn = $derived(data.signedIn);
 // svelte-ignore state_referenced_locally -- initial server state, by design
 let saved = $state(data.saved);
 let saving = $state(false);
-let saveError = $state(false);
+let saveError = $state<string | null>(null);
 async function toggleSave() {
 	if (saving) return;
 	saving = true;
 	const was = saved;
 	saved = !was;
-	saveError = false;
+	saveError = null;
 	try {
 		if (was) await client.reading.unsaveComic({ comicId: detail.id });
 		else await client.reading.saveComic({ comicId: detail.id });
-	} catch {
+	} catch (error) {
 		saved = was; // failed mutation reverts
-		saveError = true;
+		saveError = errorText(mapWriteError(error));
 	} finally {
 		saving = false;
 	}
@@ -39,19 +39,19 @@ async function toggleSave() {
 // svelte-ignore state_referenced_locally -- initial server state, by design
 let following = $state(data.following);
 let followingBusy = $state(false);
-let followError = $state(false);
+let followError = $state<string | null>(null);
 async function toggleFollow() {
 	if (followingBusy) return;
 	followingBusy = true;
 	const was = following;
 	following = !was;
-	followError = false;
+	followError = null;
 	try {
 		if (was) await client.social.unfollow({ creatorId: detail.creator.id });
 		else await client.social.follow({ creatorId: detail.creator.id });
-	} catch {
+	} catch (error) {
 		following = was; // failed mutation reverts
-		followError = true;
+		followError = errorText(mapWriteError(error));
 	} finally {
 		followingBusy = false;
 	}
@@ -60,7 +60,7 @@ async function toggleFollow() {
 // Posting a comment re-runs the server load, so the list stays the
 // server-rendered truth rather than a client-side copy.
 let commentBusy = $state(false);
-let commentError = $state(false);
+let commentError = $state<string | null>(null);
 async function submitComment(e: SubmitEvent) {
 	e.preventDefault();
 	if (commentBusy) return;
@@ -68,13 +68,13 @@ async function submitComment(e: SubmitEvent) {
 	const body = new FormData(form).get("body");
 	if (typeof body !== "string" || !body.trim()) return;
 	commentBusy = true;
-	commentError = false;
+	commentError = null;
 	try {
 		await client.social.comment({ comicId: detail.id, body: body.trim() });
 		form.reset();
 		await invalidate((url) => url.pathname === `/comic/${slug}`);
-	} catch {
-		commentError = true;
+	} catch (error) {
+		commentError = errorText(mapWriteError(error));
 	} finally {
 		commentBusy = false;
 	}
@@ -84,16 +84,16 @@ async function submitComment(e: SubmitEvent) {
 let rating = $state(data.rating);
 const myRating = $derived(rating?.userValue?.toString() ?? "");
 let rateBusy = $state(false);
-let rateError = $state(false);
+let rateError = $state<string | null>(null);
 async function submitRating(e: Event) {
 	const value = Number((e.target as HTMLSelectElement).value);
 	if (!Number.isInteger(value) || value < 1 || value > 5) return;
 	rateBusy = true;
-	rateError = false;
+	rateError = null;
 	try {
 		rating = await client.social.rate({ comicId: detail.id, value });
-	} catch {
-		rateError = true;
+	} catch (error) {
+		rateError = errorText(mapWriteError(error));
 	} finally {
 		rateBusy = false;
 	}
@@ -109,6 +109,8 @@ const REPORT_REASONS = [
 
 /** Per-target feedback for report forms: "done" | "already" | "failed". */
 let reportMsg = $state<Record<string, "done" | "already" | "failed">>({});
+/** Mapped message behind a "failed" — specific when the server gives one. */
+let reportErrorMsg = $state<Record<string, string>>({});
 async function submitReport(
 	e: SubmitEvent,
 	targetType: "comic" | "comment",
@@ -132,8 +134,12 @@ async function submitReport(
 		});
 		reportMsg[targetId] = "done";
 	} catch (error) {
-		reportMsg[targetId] =
-			(error as { code?: string }).code === "CONFLICT" ? "already" : "failed";
+		const code = (error as { code?: string }).code;
+		if (code === "CONFLICT") reportMsg[targetId] = "already";
+		else {
+			reportMsg[targetId] = "failed";
+			reportErrorMsg[targetId] = errorText(mapWriteError(error));
+		}
 	}
 }
 
@@ -238,7 +244,7 @@ async function submitDelete() {
 				{:else if reportMsg[targetId] === "already"}
 					<span class="text-text-2">{m.detail_report_already()}</span>
 				{:else if reportMsg[targetId] === "failed"}
-					<span class="text-accent">{m.error_generic()}</span>
+					<span class="text-accent" role="alert">{reportErrorMsg[targetId] ?? m.error_generic()}</span>
 				{/if}
 			</form>
 		</details>
@@ -406,7 +412,7 @@ async function submitDelete() {
 						{/each}
 					</select>
 					{#if rateError}
-						<span class="text-accent">{m.error_generic()}</span>
+						<span class="text-accent" role="alert">{rateError}</span>
 					{/if}
 				</div>
 			{/if}
@@ -435,7 +441,7 @@ async function submitDelete() {
 						<span
 							class="self-center text-xs text-accent"
 							role="alert"
-						>{m.error_generic()}</span>
+						>{saveError}</span>
 					{/if}
 					<button
 						type="button"
@@ -451,7 +457,7 @@ async function submitDelete() {
 						<span
 							class="self-center text-xs text-accent"
 							role="alert"
-						>{m.error_generic()}</span>
+						>{followError}</span>
 					{/if}
 				{:else}
 					<span class="self-center text-xs text-text-2">{m.detail_save_unavailable()}</span>
@@ -525,7 +531,7 @@ async function submitDelete() {
 						{m.detail_comment_submit()}
 					</button>
 					{#if commentError}
-						<span class="text-xs text-accent" role="alert">{m.error_generic()}</span>
+						<span class="text-xs text-accent" role="alert">{commentError}</span>
 					{/if}
 				</div>
 			</form>
