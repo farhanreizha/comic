@@ -1,6 +1,19 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { activeWindow } from "./reader";
+import { activeWindow, clampPage } from "./reader";
+
+describe("clampPage", () => {
+	test("clamps below and above", () => {
+		assert.equal(clampPage(0, 40), 1);
+		assert.equal(clampPage(999, 40), 40);
+	});
+	test("rounds fractional input", () => {
+		assert.equal(clampPage(12.6, 40), 13);
+	});
+	test("empty/NaN input falls back to page 1", () => {
+		assert.equal(clampPage(Number(""), 40), 1);
+	});
+});
 
 describe("activeWindow", () => {
 	test("centered window", () => {

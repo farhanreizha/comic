@@ -54,6 +54,8 @@
 	"detail_not_found": "Comic not found.",
 	"detail_back": "Back to browse",
 	"reader_page_of": "Page {page} / {total}",
+	"reader_jump_to": "Jump to page",
+	"reader_jump_go": "Go",
 	"reader_next_chapter": "Next chapter",
 	"reader_next_chapter_label": "Read chapter {ordinal}",
 	"reader_back_to_comic": "Back to comic",

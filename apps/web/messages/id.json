@@ -54,6 +54,8 @@
 	"detail_not_found": "Komik tidak ditemukan.",
 	"detail_back": "Kembali ke Jelajah",
 	"reader_page_of": "Halaman {page} / {total}",
+	"reader_jump_to": "Lompat ke halaman",
+	"reader_jump_go": "Ke",
 	"reader_next_chapter": "Chapter berikutnya",
 	"reader_next_chapter_label": "Baca chapter {ordinal}",
 	"reader_back_to_comic": "Kembali ke komik",
