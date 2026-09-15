@@ -1,7 +1,7 @@
 import type { AppRouterClient } from "@comic/api/routers/index";
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
-import { ENV } from "../env";
+import { ENV } from "../varlock-env";
 
 /** Minimal structural type for SvelteKit's `event.cookies`. */
 type IncomingCookies = {

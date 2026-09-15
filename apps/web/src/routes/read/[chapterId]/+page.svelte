@@ -6,7 +6,7 @@ import { page } from "$app/state";
 import { client } from "$lib/orpc";
 import { activeWindow } from "$lib/reader";
 import { m } from "$paraglide/messages.js";
-import { ENV } from "../../../env";
+import { ENV } from "../../../varlock-env";
 
 // Chapter, page manifest, and comic come from the server load so the first
 // paint is real content. Scroll window + progress throttle stay client-side.
