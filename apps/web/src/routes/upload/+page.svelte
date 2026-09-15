@@ -269,7 +269,7 @@
 							id="chapter-archive"
 							type="file"
 							accept=".cbz,.zip,application/zip"
-							class="mt-3 text-sm text-text-2"
+							class="mt-3 max-w-full text-sm text-text-2"
 							onchange={(e) => setFiles((e.target as HTMLInputElement).files)}
 						/>
 						<p class="mt-3 text-xs text-text-2">{m.upload_or_images()}</p>
@@ -277,7 +277,7 @@
 							type="file"
 							accept="image/*"
 							multiple
-							class="mt-2 text-sm text-text-2"
+							class="mt-2 max-w-full text-sm text-text-2"
 							onchange={(e) => setFiles((e.target as HTMLInputElement).files)}
 						/>
 					</div>

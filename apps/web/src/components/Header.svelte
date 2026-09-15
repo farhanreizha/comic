@@ -13,12 +13,14 @@
 
 <header class="sticky top-0 z-40 border-b border-line bg-bg/95 backdrop-blur">
 	<div
-		class="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3"
+		class="mx-auto flex min-w-0 max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3"
 	>
 		<a href="/" class="font-display text-2xl font-bold tracking-tight text-ink">
 			komi<span class="text-accent">k</span>
 		</a>
-		<nav class="order-3 -mx-1 w-full overflow-x-auto sm:order-none sm:w-auto sm:overflow-visible" aria-label="main">
+		<!-- w-full + min-w-0 below sm: nav gets its own flex line and scrolls
+		     internally instead of inflating the header's min-content (BUG-2). -->
+		<nav class="order-3 -mx-1 w-full min-w-0 overflow-x-auto sm:order-none sm:w-auto sm:overflow-visible" aria-label="main">
 			<ul class="flex items-center gap-1 text-sm whitespace-nowrap">
 				<li><a href="/" class="rounded px-2.5 py-1.5 font-semibold text-text-2 hover:bg-surface/60 hover:text-ink">{m.nav_browse()}</a></li>
 				<li><a href="/?focus=search" class="rounded px-2.5 py-1.5 font-semibold text-text-2 hover:bg-surface/60 hover:text-ink">{m.nav_search()}</a></li>

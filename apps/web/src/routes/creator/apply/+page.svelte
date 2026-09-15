@@ -113,7 +113,7 @@
 						name="sample"
 						type="file"
 						accept="image/*,.pdf"
-						class="mt-1 block text-sm text-text-2"
+						class="mt-1 block max-w-full text-sm text-text-2"
 					/>
 				</div>
 				<div class="flex items-center gap-3">
