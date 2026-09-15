@@ -27,11 +27,15 @@
 	let creating = $state(false);
 	let createMsg = $state<string | null>(null);
 	let createOk = $state<string | null>(null);
-	const selectedGenres = $state<Set<Genre>>(new Set());
+	/* `$state<Set>` proxies don't make .has()/.add() deep-reactive in Svelte
+	 * 5.57 (proven in admin queues 2cca24c + upload e2e) — reassign a fresh
+	 * Set so the chip class binding re-reads and re-renders. */
+	let selectedGenres = $state<Set<Genre>>(new Set());
 
 	function toggleGenre(g: Genre) {
-		if (selectedGenres.has(g)) selectedGenres.delete(g);
-		else selectedGenres.add(g);
+		selectedGenres = selectedGenres.has(g)
+			? new Set([...selectedGenres].filter((x) => x !== g))
+			: new Set([...selectedGenres, g]);
 	}
 
 	async function submitCreate(e: SubmitEvent) {
@@ -50,7 +54,7 @@
 			});
 			createOk = comic.title;
 			form.reset();
-			selectedGenres.clear();
+			selectedGenres = new Set();
 			// the fresh comic belongs in step 2's selector without a reload
 			fresh = [comic, ...fresh];
 			targetComic = comic.id;
