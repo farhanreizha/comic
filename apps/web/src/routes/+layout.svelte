@@ -18,9 +18,12 @@
 	{#if inReader}
 		{@render children()}
 	{:else}
-		<div class="grid min-h-svh grid-rows-[auto_1fr_auto]">
+		<!-- grid-cols minmax(0,1fr) + min-w-0 items: the implicit auto grid track
+		     otherwise stretches to header/main min-content and inflates the whole
+		     page past the viewport (BUG-2). -->
+		<div class="grid min-h-svh grid-cols-[minmax(0,1fr)] grid-rows-[auto_1fr_auto]">
 			<Header role={data.role} signedIn={data.signedIn} />
-			<main>
+			<main class="min-w-0">
 				{@render children()}
 			</main>
 			<Footer />
