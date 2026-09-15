@@ -1,0 +1,291 @@
+{
+	"schemaVersion": 2,
+	"generatedAt": "2026-09-15T12:00:00+07:00",
+	"title": "Design System: comic",
+	"extensions": {
+		"colorMeta": {
+			"primary": {
+				"role": "primary",
+				"displayName": "Crimson",
+				"canonical": "#9a2018",
+				"tonalRamp": [
+					"#571210",
+					"#6e1815",
+					"#842019",
+					"#9a2018",
+					"#b13b34",
+					"#c45e58",
+					"#d88984",
+					"#eab4b0"
+				]
+			},
+			"primary-deep": {
+				"role": "primary",
+				"displayName": "Rust",
+				"canonical": "#572a21",
+				"tonalRamp": [
+					"#321613",
+					"#3f1c17",
+					"#4b221b",
+					"#572a21",
+					"#74443b",
+					"#8f6058",
+					"#ab837c",
+					"#c6a8a2"
+				]
+			},
+			"neutral-bg": {
+				"role": "neutral",
+				"displayName": "Cream",
+				"canonical": "#f8f5f3",
+				"tonalRamp": [
+					"#8c8a88",
+					"#a8a6a4",
+					"#c4c2c0",
+					"#dedcd9",
+					"#e8e6e4",
+					"#f1efed",
+					"#f8f5f3",
+					"#fdfcfb"
+				]
+			},
+			"neutral-surface": {
+				"role": "neutral",
+				"displayName": "Sand",
+				"canonical": "#ddc8b6",
+				"tonalRamp": [
+					"#7a6b5e",
+					"#936f5f",
+					"#ab8573",
+					"#c29a86",
+					"#ddc8b6",
+					"#e4d3c5",
+					"#ecded3",
+					"#f5ece5"
+				]
+			},
+			"neutral-line": {
+				"role": "neutral",
+				"displayName": "Taupe Line",
+				"canonical": "#a18777",
+				"tonalRamp": [
+					"#574a41",
+					"#6b5b4f",
+					"#7e6c5e",
+					"#917c6b",
+					"#a18777",
+					"#b49d8f",
+					"#c6b3a8",
+					"#d8c9c1"
+				]
+			},
+			"neutral-ink": {
+				"role": "neutral",
+				"displayName": "Ink",
+				"canonical": "#1a1715",
+				"tonalRamp": [
+					"#0d0b0a",
+					"#14110f",
+					"#1a1715",
+					"#241f1c",
+					"#332c28",
+					"#4a403a",
+					"#6b5d55",
+					"#8c7c72"
+				]
+			},
+			"neutral-text-2": {
+				"role": "neutral",
+				"displayName": "Muted Ink",
+				"canonical": "#605c5a",
+				"tonalRamp": [
+					"#2f2d2c",
+					"#3d3a39",
+					"#4b4746",
+					"#585452",
+					"#605c5a",
+					"#837e7b",
+					"#a6a09d",
+					"#c8c2bf"
+				]
+			},
+			"decorative": {
+				"role": "neutral",
+				"displayName": "Decorative",
+				"canonical": "#a4a09e",
+				"tonalRamp": [
+					"#52504e",
+					"#6a6765",
+					"#827e7c",
+					"#9b9794",
+					"#a4a09e",
+					"#b8b4b1",
+					"#ccc8c6",
+					"#dedbd9"
+				]
+			},
+			"reader-bg": {
+				"role": "neutral",
+				"displayName": "Reader Black",
+				"canonical": "#121110",
+				"tonalRamp": [
+					"#090808",
+					"#0e0d0c",
+					"#121110",
+					"#1a1715",
+					"#262220",
+					"#3a3330",
+					"#564c47",
+					"#73655e"
+				]
+			},
+			"reader-accent": {
+				"role": "primary",
+				"displayName": "Reader Crimson",
+				"canonical": "#db6255",
+				"tonalRamp": [
+					"#5e2a25",
+					"#7a352e",
+					"#974038",
+					"#db6255",
+					"#e38277",
+					"#eca097",
+					"#f3bdb6",
+					"#f8d8d3"
+				]
+			}
+		},
+		"typographyMeta": {
+			"display": {
+				"displayName": "Fraunces",
+				"purpose": "Comic titles, page H1s, section headlines."
+			},
+			"body": {
+				"displayName": "Manrope",
+				"purpose": "Body copy, metadata, form text, UI."
+			},
+			"label": {
+				"displayName": "Fraunces Eyebrow",
+				"purpose": "Uppercase wide-tracked section eyebrows and labels."
+			}
+		},
+		"shadows": [],
+		"motion": [
+			{
+				"name": "ease-standard",
+				"value": "cubic-bezier(0.4, 0, 0.2, 1)",
+				"purpose": "Default easing for border/background state transitions on buttons, inputs, cards."
+			}
+		],
+		"breakpoints": [
+			{ "name": "xs", "value": "360px" },
+			{ "name": "sm", "value": "640px" }
+		]
+	},
+	"components": [
+		{
+			"name": "Primary Button",
+			"kind": "button",
+			"refersTo": "button-primary",
+			"description": "The one crimson action on a screen — primary submit, Read First, Sign up.",
+			"html": "<button class=\"ds-btn-primary\">READ FIRST</button>",
+			"css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; background: var(--color-primary); color: var(--color-neutral-bg); border: none; border-radius: 4px; padding: 8px 20px; font-family: \"Manrope\", system-ui, sans-serif; font-weight: 600; font-size: 0.875rem; cursor: pointer; transition: background 0.2s cubic-bezier(0.4,0,0.2,1); } .ds-btn-primary:hover { background: var(--color-primary-deep); } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 60%, transparent); } .ds-btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }"
+		},
+		{
+			"name": "Secondary Button",
+			"kind": "button",
+			"refersTo": "button-secondary",
+			"description": "Quiet bordered action — Save, Edit, Cancel. Neutral until hover.",
+			"html": "<button class=\"ds-btn-secondary\">SAVE</button>",
+			"css": ".ds-btn-secondary { display: inline-flex; align-items: center; justify-content: center; background: transparent; color: var(--color-neutral-text-2); border: 1px solid var(--color-neutral-line); border-radius: 4px; padding: 8px 20px; font-family: \"Manrope\", system-ui, sans-serif; font-weight: 600; font-size: 0.875rem; cursor: pointer; transition: color 0.2s cubic-bezier(0.4,0,0.2,1), border-color 0.2s cubic-bezier(0.4,0,0.2,1); } .ds-btn-secondary:hover { color: var(--color-primary); border-color: var(--color-primary); } .ds-btn-secondary:focus-visible { outline: none; box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 60%, transparent); }"
+		},
+		{
+			"name": "Text Input",
+			"kind": "input",
+			"refersTo": "input",
+			"description": "Full-width field with hairline border; crimson border on focus.",
+			"html": "<div class=\"ds-field\"><label class=\"ds-field-label\" for=\"ds-i\">Email</label><input id=\"ds-i\" class=\"ds-input\" type=\"text\" placeholder=\"you@example.com\"></div>",
+			"css": ".ds-field { display: block; } .ds-field-label { display: block; margin-bottom: 4px; font-family: \"Manrope\", system-ui, sans-serif; font-weight: 600; font-size: 0.875rem; color: var(--color-neutral-ink); } .ds-input { width: 100%; background: var(--color-neutral-bg); border: 1px solid var(--color-neutral-line); border-radius: 4px; padding: 8px; font-family: \"Manrope\", system-ui, sans-serif; font-size: 0.875rem; color: var(--color-neutral-ink); transition: border-color 0.2s cubic-bezier(0.4,0,0.2,1); } .ds-input::placeholder { color: var(--color-decorative); } .ds-input:focus { outline: none; border-color: var(--color-primary); } .ds-input:disabled { color: var(--color-decorative); }"
+		},
+		{
+			"name": "Genre Chip",
+			"kind": "chip",
+			"refersTo": "chip",
+			"description": "Uppercase bordered tag for genres; crimson when selected.",
+			"html": "<span class=\"ds-chip\">ACTION</span>",
+			"css": ".ds-chip { display: inline-block; border: 1px solid var(--color-neutral-line); border-radius: 4px; padding: 2px 6px; font-family: \"Manrope\", system-ui, sans-serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--color-neutral-text-2); background: transparent; }"
+		},
+		{
+			"name": "Genre Chip (selected)",
+			"kind": "chip",
+			"refersTo": "chip-selected",
+			"description": "Selected filter/edit state — crimson border + crimson text.",
+			"html": "<span class=\"ds-chip ds-chip-sel\">ACTION</span>",
+			"css": ".ds-chip-sel { border-color: var(--color-primary); color: var(--color-primary); }"
+		},
+		{
+			"name": "Comic Card Cover",
+			"kind": "card",
+			"refersTo": "card",
+			"description": "2/3 portrait cover frame; Sand fill, hairline border, crimson on hover.",
+			"html": "<article class=\"ds-card\"><div class=\"ds-cover\"><span class=\"ds-diamond\"></span></div><h3 class=\"ds-card-title\">Comic Title</h3></article>",
+			"css": ".ds-card { display: block; } .ds-cover { aspect-ratio: 2 / 3; width: 100%; overflow: hidden; background: var(--color-neutral-surface); border: 1px solid var(--color-neutral-line); border-radius: 4px; display: flex; align-items: center; justify-content: center; transition: border-color 0.2s cubic-bezier(0.4,0,0.2,1); } .ds-card:hover .ds-cover { border-color: var(--color-primary); } .ds-diamond { display: inline-block; width: 8px; height: 8px; transform: rotate(45deg); background: var(--color-primary); } .ds-card-title { margin-top: 8px; font-family: \"Fraunces\", Georgia, serif; font-weight: 700; font-size: 1rem; line-height: 1.2; color: var(--color-neutral-ink); transition: color 0.2s cubic-bezier(0.4,0,0.2,1); } .ds-card:hover .ds-card-title { color: var(--color-primary); }"
+		},
+		{
+			"name": "Nav Link",
+			"kind": "nav",
+			"refersTo": "nav-link",
+			"description": "Header nav item — neutral, Sand tint + ink on hover.",
+			"html": "<a class=\"ds-navlink\" href=\"/\">Browse</a>",
+			"css": ".ds-navlink { display: inline-block; border-radius: 4px; padding: 6px 10px; font-family: \"Manrope\", system-ui, sans-serif; font-weight: 600; font-size: 0.875rem; color: var(--color-neutral-text-2); text-decoration: none; transition: background 0.2s cubic-bezier(0.4,0,0.2,1), color 0.2s cubic-bezier(0.4,0,0.2,1); } .ds-navlink:hover { background: color-mix(in srgb, var(--color-neutral-surface) 60%, transparent); color: var(--color-neutral-ink); }"
+		}
+	],
+	"narrative": {
+		"northStar": "The Editorial Reading Room",
+		"overview": "comic is a comic publishing platform where the reading experience is the room and everything else is quiet furniture. The visual system is an editorial print metaphor rendered for screen: warm cream paper, a single crimson voice, and a refined serif (Fraunces) carrying titles while a clean sans (Manrope) handles the body. Nothing competes with the page. Depth is suggested by hairline borders and tonal shifts, never by shadows — the surfaces are flat and confident, like a well-set magazine spread. The system is restrained and editorial: accent crimson appears sparingly, reserved for the primary action and the occasional emphasis, while thin line-colored borders do the structural work.",
+		"keyCharacteristics": [
+			"Cream paper background (#f8f5f3) with a single crimson accent (#9a2018); accent is rare by design.",
+			"Flat, border-driven depth — no shadows; border-line hairlines define structure.",
+			"Fraunces (serif) for display + eyebrow labels, Manrope (sans) for body and UI.",
+			"The recurring solid crimson diamond marks section titles.",
+			"A dedicated dark reader theme that strips app chrome entirely.",
+			"WCAG 2.1 AA is a hard constraint: #a4a09e is decoration-only, never text on cream."
+		],
+		"rules": [
+			{
+				"name": "The One Voice Rule",
+				"body": "Crimson is the only chromatic accent in the light theme and appears on ≤10% of any screen. Its rarity is the point — when it shows, it means 'this is the action.' Reserved decorative neutrals (#a4a09e) never carry text.",
+				"section": "colors"
+			},
+			{
+				"name": "The Reader Swap Rule",
+				"body": "In /read/*, the brand crimson (#9a2018) fails 2.33:1 on the dark ground, so it is swapped for Reader Crimson (#db6255), which meets AA there. The dark reader palette (#121110 bg, #1a1715 chrome, #f8f5f3 ink) replaces the cream system wholesale; no app header or footer appears.",
+				"section": "colors"
+			},
+			{
+				"name": "The Eyebrow Rule",
+				"body": "Every section title is preceded by an uppercase Fraunces eyebrow (0.72rem, 0.18em tracking, crimson). It is the system's signature label treatment — never Manrope, never lowercase.",
+				"section": "typography"
+			},
+			{
+				"name": "The Flat-By-Default Rule",
+				"body": "Surfaces are flat at rest. Borders (never shadows) separate and define. State changes are communicated by border-color and fill shifts, not by elevation.",
+				"section": "elevation"
+			}
+		],
+		"dos": [
+			"Do keep crimson rare — reserve it for the primary action, the diamond marker, and hover/active emphasis.",
+			"Do use border-line hairlines (not shadows) to separate and define surfaces.",
+			"Do precede every section title with the uppercase Fraunces crimson eyebrow.",
+			"Do enforce ≥16px control font and ≥28px hit targets on touch/narrow viewports.",
+			"Do swap to the dark reader theme (#db6255 accent on #121110) inside /read/* and strip all app chrome there."
+		],
+		"donts": [
+			"Don't use #a4a09e (Decorative) as text on cream — it fails AA (2.39:1); it is decoration only.",
+			"Don't introduce box-shadows or elevation to 'lift' cards/buttons; depth is border- and tone-driven.",
+			"Don't let long titles or covers stretch the layout past the viewport — keep min-w-0 on the main track.",
+			"Don't use brand crimson (#9a2018) on the dark reader ground; it fails 2.33:1 — use Reader Crimson #db6255.",
+			"Don't replace the Fraunces/Manrope pairing or the cream/crimson palette without revisiting this system."
+		]
+	}
+}

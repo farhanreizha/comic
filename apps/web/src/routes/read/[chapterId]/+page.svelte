@@ -148,9 +148,6 @@ function onKey(event: KeyboardEvent) {
 	}
 }
 
-/** Page-jump form: submit (Enter or Go) scrolls, keystrokes do not. */
-let jumpValue = $state("");
-let nextBar: HTMLButtonElement | undefined = $state();
 function onJump(event: SubmitEvent) {
 	event.preventDefault();
 	const n = Number.parseInt(jumpValue, 10);
@@ -215,6 +212,7 @@ const comicSlug = $derived(data.comic?.slug ?? "");
 let jumpOpen = $state(false);
 let jumpValue = $state("");
 let jumpInput: HTMLInputElement | undefined = $state();
+let nextBar: HTMLButtonElement | undefined = $state();
 
 function openJump() {
 	jumpValue = "";
