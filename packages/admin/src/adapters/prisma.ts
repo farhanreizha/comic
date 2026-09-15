@@ -14,6 +14,7 @@ import type {
 	PageWindow,
 	ReportRecord,
 	ReportStatus,
+	UserRow,
 } from "../types";
 
 const isConflict = (error: unknown): boolean =>
@@ -124,19 +125,33 @@ function windowWhere(window: PageWindow): Record<string, unknown> {
 }
 
 export function createPrismaAdminData(db: Database): AdminDataPort {
+	const userRowSelect = {
+		id: true,
+		name: true,
+		role: true,
+		suspendedAt: true,
+		suspendReason: true,
+	} as const;
+
+	async function findUser(id: string): Promise<UserRow | null> {
+		const row = await db.user.findUnique({
+			where: { id },
+			select: userRowSelect,
+		});
+		return row ? ({ ...row, role: row.role as Role } as UserRow) : null;
+	}
+
 	return {
-		async findUserById(id) {
-			const row = await db.user.findUnique({
-				where: { id },
-				select: { id: true, name: true, role: true },
+		findUserById: findUser,
+		findUserForSuspend: findUser,
+		async setUserSuspension(userId, suspended, reason) {
+			const updated = await db.user.updateMany({
+				where: { id: userId },
+				data: suspended
+					? { suspendedAt: new Date(), suspendReason: reason }
+					: { suspendedAt: null, suspendReason: null },
 			});
-			return row
-				? ({ ...row, role: row.role as Role } as {
-						id: string;
-						name: string;
-						role: Role;
-					})
-				: null;
+			if (updated.count === 0) notFound("user not found");
 		},
 		async findLatestApplication(userId) {
 			const row = await db.creatorApplication.findFirst({

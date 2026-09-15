@@ -223,5 +223,31 @@ export function createAdmin(deps: {
 			if (!exists) throw adminError("NOT_FOUND", "comic not found");
 			await data.setComicTakedown(input.comicId, input.takenDown, reason);
 		},
+
+		async suspendUser(viewer, input) {
+			const admin = adminId(viewer);
+			const user = await data.findUserForSuspend(input.userId);
+			if (!user) throw adminError("NOT_FOUND", "user not found");
+			// Lockout guard: an admin suspending themselves could strand the
+			// whole admin surface. Suspending other admins stays allowed.
+			if (user.id === admin) {
+				throw adminError("INVALID_INPUT", "cannot suspend yourself");
+			}
+			if (user.suspendedAt) {
+				throw adminError("CONFLICT", "user already suspended");
+			}
+			const reason = input.reason?.trim() || null;
+			await data.setUserSuspension(input.userId, true, reason);
+		},
+
+		async unsuspendUser(viewer, input) {
+			adminId(viewer);
+			const user = await data.findUserForSuspend(input.userId);
+			if (!user) throw adminError("NOT_FOUND", "user not found");
+			if (!user.suspendedAt) {
+				throw adminError("CONFLICT", "user is not suspended");
+			}
+			await data.setUserSuspension(input.userId, false, null);
+		},
 	};
 }
