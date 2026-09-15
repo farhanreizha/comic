@@ -62,7 +62,9 @@ function computeCurrent() {
 			best = i + 1;
 		}
 	}
-	current = best;
+	// The strip's last child is the end-of-chapter block, not a page; and an
+	// image still decoding can push the reading line past the real last page.
+	current = Math.min(best, pages.length);
 }
 
 function scrollToPage(n: number) {
@@ -158,11 +160,14 @@ $effect(() => {
 		.shelf()
 		.then((s) => {
 			const entry = s.continueReading.find((e) => e.chapter.id === chapterId);
-			if (entry && entry.page > 1) {
+			// Shelf progress can outlive the page manifest (pages deleted,
+			// re-ingest) — clamp against what actually loaded.
+			const target = Math.min(entry?.page ?? 1, pages.length);
+			if (target > 1) {
 				// Instant jump — a smooth scroll from page 1 is disorienting.
-				const el = strip?.children[entry.page - 1] as HTMLElement | undefined;
+				const el = strip?.children[target - 1] as HTMLElement | undefined;
 				el?.scrollIntoView({ block: "start" });
-				current = entry.page;
+				current = target;
 			}
 		})
 		.catch(() => {});
@@ -198,10 +203,10 @@ const chapterTitle = $derived(
 	</div>
 
 	<!-- progress bar -->
-	<div class="sticky top-[37px] z-40 h-0.5 w-full bg-reader-chrome" aria-hidden="true">
+	<div class="sticky top-[37px] z-40 h-0.5 w-full overflow-hidden bg-reader-chrome" aria-hidden="true">
 		<div
 			class="h-full bg-reader-accent transition-[width] duration-150"
-			style="width: {totalPages ? (current / totalPages) * 100 : 0}%"
+			style="width: {totalPages ? Math.min(1, current / totalPages) * 100 : 0}%"
 		></div>
 	</div>
 
