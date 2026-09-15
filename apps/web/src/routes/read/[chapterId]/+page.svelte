@@ -86,6 +86,10 @@ function advance() {
 	scrollToPage(current + 1);
 }
 
+function retreat() {
+	if (current > 1) scrollToPage(current - 1);
+}
+
 /* --- progress: throttled writes, flushed on visibilitychange --- */
 const PROGRESS_MS = 2000;
 let dirty = false;
@@ -127,9 +131,12 @@ function onKey(event: KeyboardEvent) {
 		jumpInput?.blur();
 		return;
 	}
-	// Don't hijack keys while the jump input (or any field) has focus.
-	const target = event.target as HTMLElement | null;
-	if (target?.closest("input,textarea,select,button")) return;
+	// Never hijack keys aimed at a focused control: Space on a focused
+	// <button> already fires it, and typing in the jump input is not nav.
+	const t = event.target as HTMLElement | null;
+	if (t && (t.closest("input, textarea, select, button") || t.isContentEditable)) {
+		return;
+	}
 	if (event.key === "PageDown" || event.key === " ") {
 		event.preventDefault();
 		advance();
@@ -139,6 +146,17 @@ function onKey(event: KeyboardEvent) {
 	} else if (event.key === "ArrowDown") {
 		/* native scroll */
 	}
+}
+
+/** Page-jump form: submit (Enter or Go) scrolls, keystrokes do not. */
+let jumpValue = $state("");
+let nextBar: HTMLButtonElement | undefined = $state();
+function onJump(event: SubmitEvent) {
+	event.preventDefault();
+	const n = Number.parseInt(jumpValue, 10);
+	if (Number.isFinite(n)) scrollToPage(n);
+	jumpValue = "";
+	nextBar?.focus();
 }
 
 function onVisibility() {
@@ -219,7 +237,7 @@ const chapterTitle = $derived(
 	<title>{chapterTitle} — komik</title>
 </svelte:head>
 
-<svelte:window onkeydown={onKey} onclick={(e) => e.target === document.body && advance()} />
+<svelte:window onkeydown={onKey} />
 
 <div class="min-h-svh bg-reader-bg">
 	<!-- chrome -->
@@ -280,19 +298,59 @@ const chapterTitle = $derived(
 		></div>
 	</div>
 
+	<!-- page controls: sticky bottom so they are reachable by thumb and Tab.
+	     Tap/keys on the comic itself do nothing — only scroll + these buttons. -->
+	<nav
+		class="sticky bottom-0 z-40 flex items-center gap-2 border-t border-reader-chrome bg-reader-chrome/95 px-3 py-2 backdrop-blur"
+		aria-label={m.reader_controls_label()}
+	>
+		<button
+			type="button"
+			class="prev-btn min-h-11 min-w-11 border border-reader-decor/40 px-3 text-sm font-semibold text-reader-ink transition-colors hover:border-reader-accent hover:text-reader-accent disabled:pointer-events-none disabled:opacity-40"
+			onclick={retreat}
+			disabled={current <= 1}
+			title="{m.reader_prev()} (Page Up)"
+		>
+			← {m.reader_prev()}
+		</button>
+		<form class="ml-auto flex items-center gap-2" onsubmit={onJump}>
+			<label class="text-xs text-reader-ink" for="reader-jump">{m.reader_page_input_label()}</label>
+			<input
+				id="reader-jump"
+				type="number"
+				min="1"
+				max={totalPages}
+				bind:value={jumpValue}
+				class="w-16 border border-reader-decor/40 bg-reader-bg px-2 py-1.5 text-sm text-reader-ink"
+			/>
+			<button
+				type="submit"
+				class="min-h-11 border border-reader-decor/40 px-3 text-sm font-semibold text-reader-ink transition-colors hover:border-reader-accent hover:text-reader-accent"
+			>
+				{m.reader_go()}
+			</button>
+		</form>
+		<button
+			bind:this={nextBar}
+			type="button"
+			class="next-btn min-h-11 min-w-11 bg-reader-accent px-3 text-sm font-bold text-reader-bg transition-opacity hover:opacity-90"
+			onclick={advance}
+			title={current >= totalPages && nextChapter
+				? m.reader_next_chapter_nav()
+				: `${m.reader_next()} (Space)`}
+		>
+			{current >= totalPages && nextChapter ? m.reader_next_chapter_nav() : `${m.reader_next()} →`}
+		</button>
+	</nav>
+
 	<!-- continuous strip; each slot reserves its aspect-ratio up front -->
 	<div bind:this={strip} class="mx-auto max-w-[42rem]">
 		{#each pages as p, i (p.id)}
-			<!-- svelte-ignore a11y_no_noninteractive_element_interactions, a11y_click_events_have_key_events -->
 			<div
 				class="relative w-full"
 				style="aspect-ratio: {p.width} / {p.height}"
 				role="img"
 				aria-label={m.reader_page_of({ page: i + 1, total: totalPages })}
-				onclick={(e) => {
-					e.stopPropagation();
-					advance();
-				}}
 			>
 				{#if activeIds.has(p.id)}
 					<img
