@@ -149,11 +149,14 @@ let editBusy = $state(false);
 let editMsg = $state<string | null>(null);
 let editOk = $state(false);
 // svelte-ignore state_referenced_locally -- prefill from server state, by design
+// reassign-only Set (see upload/+page.svelte): in-place .add/.delete never
+// re-rendered the chip class binding in Svelte 5.57.
 let editGenres = $state<Set<Genre>>(new Set(data.comic.genres));
 
 function toggleEditGenre(g: Genre) {
-	if (editGenres.has(g)) editGenres.delete(g);
-	else editGenres.add(g);
+	editGenres = editGenres.has(g)
+		? new Set([...editGenres].filter((x) => x !== g))
+		: new Set([...editGenres, g]);
 }
 
 async function submitEdit(e: SubmitEvent) {
