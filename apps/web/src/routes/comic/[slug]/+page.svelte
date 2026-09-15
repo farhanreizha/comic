@@ -5,7 +5,7 @@ import { GENRES, type Genre, genreLabel } from "$lib/genres";
 import { client } from "$lib/orpc";
 import { errorText, mapWriteError } from "$lib/write-ui";
 import { m } from "$paraglide/messages.js";
-import { ENV } from "../../../env";
+import { ENV } from "../../../varlock-env";
 
 // Comic, chapters, rating, comments, shelf + follow initial state come from
 // the server load. Client state only mirrors the server after a mutation.

@@ -1,6 +1,6 @@
 import { createAuthClient } from "better-auth/svelte";
 
-import { ENV } from "../env";
+import { ENV } from "../varlock-env";
 
 function getServerUrl(url: string) {
 	const processEnv = (

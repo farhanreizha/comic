@@ -1,7 +1,7 @@
 <script lang="ts">
 import ComicCard from "$components/ComicCard.svelte";
 import { m } from "$paraglide/messages.js";
-import { ENV } from "../../env";
+import { ENV } from "../../varlock-env";
 
 // Server load resolved the viewer and the shelf; no client query needed for
 // the first paint.

@@ -9,7 +9,7 @@
 		xhrUpload,
 	} from "$lib/write-ui";
 	import { m } from "$paraglide/messages.js";
-	import { ENV } from "../../env";
+	import { ENV } from "../../varlock-env";
 
 	let { data } = $props();
 

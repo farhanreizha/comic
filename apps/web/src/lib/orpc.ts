@@ -4,7 +4,7 @@ import { RPCLink } from "@orpc/client/fetch";
 import { createTanstackQueryUtils } from "@orpc/tanstack-query";
 import { QueryCache, QueryClient } from "@tanstack/svelte-query";
 
-import { ENV } from "../env";
+import { ENV } from "../varlock-env";
 
 export const queryClient = new QueryClient({
 	queryCache: new QueryCache({

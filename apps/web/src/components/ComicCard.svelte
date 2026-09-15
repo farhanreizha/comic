@@ -1,23 +1,23 @@
 <script lang="ts">
-	import { ENV } from "../env";
-	import { genreLabel, type Genre } from "$lib/genres";
-	import { m } from "$paraglide/messages.js";
+import { type Genre, genreLabel } from "$lib/genres";
+import { m } from "$paraglide/messages.js";
+import { ENV } from "../varlock-env";
 
-	export type CardComic = {
-		slug: string;
-		title: string;
-		coverUrl: string | null;
-		creator: { id: string; name: string };
-		genres: Genre[];
-		chapterCount: number;
-	};
+export type CardComic = {
+	slug: string;
+	title: string;
+	coverUrl: string | null;
+	creator: { id: string; name: string };
+	genres: Genre[];
+	chapterCount: number;
+};
 
-	let { comic }: { comic: CardComic } = $props();
+let { comic }: { comic: CardComic } = $props();
 
-	// Covers are page ids served by the image route — never a file path.
-	const cover = $derived(
-		comic.coverUrl ? `${ENV.PUBLIC_SERVER_URL}${comic.coverUrl}` : null,
-	);
+// Covers are page ids served by the image route — never a file path.
+const cover = $derived(
+	comic.coverUrl ? `${ENV.PUBLIC_SERVER_URL}${comic.coverUrl}` : null,
+);
 </script>
 
 <article class="group">
