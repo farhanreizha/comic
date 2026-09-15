@@ -13,6 +13,12 @@ export type CreateContextOptions = {
  * fields beyond its defaults) — resolve it from the user row. One extra
  * indexed lookup per authenticated request; cache only when it shows up in a
  * profile.
+ *
+ * Moderation gate (decision #5): a suspended user's existing session is
+ * demoted to anonymous here — the one place every API request resolves its
+ * viewer. Sign-in is separately blocked by the session-create hook in
+ * @comic/auth. Unsuspend takes effect on the next request; no token purge
+ * needed because the row read is per-request.
  */
 export async function viewerWithRole(
 	session: { user: { id: string } } | null | undefined,
@@ -21,8 +27,9 @@ export async function viewerWithRole(
 	const db = await getDb();
 	const user = await db.user.findUnique({
 		where: { id: session.user.id },
-		select: { role: true },
+		select: { role: true, suspendedAt: true },
 	});
+	if (user?.suspendedAt) return viewerFromSession(null);
 	const role: Role =
 		user?.role === "creator" || user?.role === "admin" ? user.role : "reader";
 	return { kind: "user", id: session.user.id, role };

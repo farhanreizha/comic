@@ -5,6 +5,10 @@ model User {
   emailVerified Boolean   @default(false)
   image         String?
   role          Role      @default(reader)
+  /** Moderation (decision #5): non-null = suspended. Sessions are rejected,
+   * sign-in is blocked; the flag never touches role or comics. */
+  suspendedAt   DateTime?
+  suspendReason String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   sessions      Session[]

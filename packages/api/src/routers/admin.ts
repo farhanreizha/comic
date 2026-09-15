@@ -169,4 +169,28 @@ export const adminRouter = {
 				adminIn(context.db, context.storage).setTakedown(context.viewer, input),
 			),
 		),
+
+	suspendUser: adminProcedure
+		.input(
+			z.object({
+				userId: z.string().min(1),
+				reason: z.string().max(2000).optional(),
+			}),
+		)
+		.handler(async ({ input, context }) =>
+			crossSeam(() =>
+				adminIn(context.db, context.storage).suspendUser(context.viewer, input),
+			),
+		),
+
+	unsuspendUser: adminProcedure
+		.input(z.object({ userId: z.string().min(1) }))
+		.handler(async ({ input, context }) =>
+			crossSeam(() =>
+				adminIn(context.db, context.storage).unsuspendUser(
+					context.viewer,
+					input,
+				),
+			),
+		),
 };

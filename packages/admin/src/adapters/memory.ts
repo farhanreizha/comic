@@ -26,7 +26,13 @@ function notFound(what: string): never {
 }
 
 export type MemoryAdminSeed = {
-	users?: { id: string; name: string; role: Role }[];
+	users?: {
+		id: string;
+		name: string;
+		role: Role;
+		suspendedAt?: Date | null;
+		suspendReason?: string | null;
+	}[];
 	comics?: {
 		id: string;
 		visibility: string;
@@ -44,10 +50,20 @@ export function createMemoryAdminData(
 	applications: ApplicationRecord[];
 	reports: ReportRecord[];
 	comics: NonNullable<MemoryAdminSeed["comics"]>;
-	users: { id: string; name: string; role: Role }[];
+	users: {
+		id: string;
+		name: string;
+		role: Role;
+		suspendedAt: Date | null;
+		suspendReason: string | null;
+	}[];
 	comments: { id: string; hiddenAt: Date | null }[];
 } {
-	const users = [...(seed.users ?? [])];
+	const users = (seed.users ?? []).map((u) => ({
+		...u,
+		suspendedAt: u.suspendedAt ?? null,
+		suspendReason: u.suspendReason ?? null,
+	}));
 	const comics = (seed.comics ?? []).map((c) => ({ ...c }));
 	const comments = (seed.comments ?? []).map((c) => ({ ...c }));
 	const applications: ApplicationRecord[] = [];
@@ -84,6 +100,15 @@ export function createMemoryAdminData(
 
 		async findUserById(id) {
 			return users.find((u) => u.id === id) ?? null;
+		},
+		async findUserForSuspend(userId) {
+			return users.find((u) => u.id === userId) ?? null;
+		},
+		async setUserSuspension(userId, suspended, reason) {
+			const user = users.find((u) => u.id === userId);
+			if (!user) notFound("user not found");
+			user.suspendedAt = suspended ? new Date() : null;
+			user.suspendReason = suspended ? reason : null;
 		},
 		async findLatestApplication(userId) {
 			const mine = applications

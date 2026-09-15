@@ -231,7 +231,13 @@ describe("admin — interface tests (docs/design/social-admin.md)", () => {
 					motivation: `m${i}`,
 				},
 			);
-			data.users.push({ id: `u-r${i}`, name: `R${i}`, role: "reader" });
+			data.users.push({
+				id: `u-r${i}`,
+				name: `R${i}`,
+				role: "reader",
+				suspendedAt: null,
+				suspendReason: null,
+			});
 		}
 		const pending = await admin.listApplications(ADMIN, { status: "pending" });
 		expect(pending.items.length).toBe(3);
@@ -251,5 +257,55 @@ describe("admin — interface tests (docs/design/social-admin.md)", () => {
 		});
 		const got = await storage.get(applied.sampleKey as string);
 		expect(Array.from(got?.bytes ?? [])).toEqual([9, 8, 7]);
+	});
+
+	test("suspend/unsuspend: admin flips the flag only; role and comics untouched", async () => {
+		const { admin, data } = setup();
+		await admin.suspendUser(ADMIN, {
+			userId: "u-creator",
+			reason: " policy violation ",
+		});
+		const creator = data.users.find((u) => u.id === "u-creator");
+		expect(creator?.suspendedAt).not.toBeNull();
+		expect(creator?.suspendReason).toBe("policy violation"); // trimmed
+		expect(creator?.role).toBe("creator"); // never touches the role
+		await admin.unsuspendUser(ADMIN, { userId: "u-creator" });
+		expect(
+			data.users.find((u) => u.id === "u-creator")?.suspendedAt,
+		).toBeNull();
+	});
+
+	test("suspend guards: re-suspend CONFLICT, unknown user NOT_FOUND, self-suspend refused", async () => {
+		const { admin, data } = setup();
+		await admin.suspendUser(ADMIN, { userId: "u-reader", reason: "spam" });
+		expect(
+			await errorOf(() => admin.suspendUser(ADMIN, { userId: "u-reader" })),
+		).toBe("CONFLICT");
+		expect(
+			await errorOf(() => admin.suspendUser(ADMIN, { userId: "ghost" })),
+		).toBe("NOT_FOUND");
+		expect(
+			await errorOf(() => admin.suspendUser(ADMIN, { userId: "u-admin" })),
+		).toBe("INVALID_INPUT");
+		expect(
+			await errorOf(() => admin.unsuspendUser(ADMIN, { userId: "u-creator" })),
+		).toBe("CONFLICT"); // not suspended
+		expect(data.users.find((u) => u.id === "u-admin")?.suspendedAt).toBeNull();
+	});
+
+	test("suspend is admin-only: creator, reader, anonymous all FORBIDDEN", async () => {
+		const { admin } = setup();
+		expect(
+			await errorOf(() => admin.suspendUser(CREATOR, { userId: "u-reader" })),
+		).toBe("FORBIDDEN");
+		expect(
+			await errorOf(() => admin.suspendUser(READER, { userId: "u-reader" })),
+		).toBe("FORBIDDEN");
+		expect(
+			await errorOf(() => admin.suspendUser(ANONYMOUS, { userId: "u-reader" })),
+		).toBe("UNAUTHENTICATED");
+		expect(
+			await errorOf(() => admin.unsuspendUser(CREATOR, { userId: "u-reader" })),
+		).toBe("FORBIDDEN");
 	});
 });

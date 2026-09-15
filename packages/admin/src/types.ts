@@ -87,10 +87,27 @@ export type PageWindow = {
 	limit: number;
 };
 
+export type UserRow = {
+	id: string;
+	name: string;
+	role: Role;
+	suspendedAt: Date | null;
+	suspendReason: string | null;
+};
+
 export type AdminDataPort = {
-	findUserById(
-		id: string,
-	): Promise<{ id: string; name: string; role: Role } | null>;
+	findUserById(id: string): Promise<UserRow | null>;
+	/** Exists-check for suspendUser; returns the current suspension state. */
+	findUserForSuspend(userId: string): Promise<UserRow | null>;
+	/**
+	 * Invariant: suspend sets suspendedAt/suspendReason only — never the
+	 * role, never the user's comics (that stays takedown's job, comic-level).
+	 */
+	setUserSuspension(
+		userId: string,
+		suspended: boolean,
+		reason: string | null,
+	): Promise<void>;
 	/** The applicant's most recent application, whatever its status. */
 	findLatestApplication(userId: string): Promise<ApplicationRecord | null>;
 	insertApplication(row: NewApplicationRow): Promise<ApplicationRecord>;
@@ -180,4 +197,9 @@ export type Admin = {
 		viewer: Viewer,
 		input: { comicId: string; takenDown: boolean; reason?: string },
 	): Promise<void>;
+	suspendUser(
+		viewer: Viewer,
+		input: { userId: string; reason?: string },
+	): Promise<void>;
+	unsuspendUser(viewer: Viewer, input: { userId: string }): Promise<void>;
 };

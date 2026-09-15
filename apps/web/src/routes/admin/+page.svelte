@@ -85,6 +85,36 @@
 			takedownBusy = false;
 		}
 	}
+
+	/* suspend panel — user-level moderation; comics stay under takedown */
+	let suspendUser = $state("");
+	let suspendReason = $state("");
+	let suspendBusy = $state(false);
+	let suspendMsg = $state<string | null>(null);
+	let suspendOk = $state(false);
+
+	async function setSuspend(suspended: boolean) {
+		if (suspendBusy || !suspendUser) return;
+		suspendBusy = true;
+		suspendMsg = null;
+		suspendOk = false;
+		try {
+			if (suspended) {
+				await client.admin.suspendUser({
+					userId: suspendUser,
+					reason: suspendReason.trim() ? suspendReason.trim() : undefined,
+				});
+			} else {
+				await client.admin.unsuspendUser({ userId: suspendUser });
+			}
+			suspendOk = true;
+			suspendReason = "";
+		} catch (error) {
+			suspendMsg = errorText(mapWriteError(error));
+		} finally {
+			suspendBusy = false;
+		}
+	}
 </script>
 
 <svelte:head>
@@ -215,6 +245,59 @@
 						</li>
 					{/each}
 				</ul>
+			{/if}
+		</section>
+
+		<!-- User suspend -->
+		<section class="mt-10">
+			<h2 class="eyebrow">{m.admin_suspend_heading()}</h2>
+			<p class="mt-2 text-xs text-text-2">{m.admin_suspend_warning()}</p>
+			<div class="mt-3 flex flex-wrap items-end gap-3 text-sm">
+				<div class="min-w-56 flex-1">
+					<label for="suspend-user" class="block font-semibold text-ink">
+						{m.admin_suspend_user_id()}
+					</label>
+					<input
+						id="suspend-user"
+						type="text"
+						class="mt-1 w-full border border-line bg-bg p-2 text-ink"
+						bind:value={suspendUser}
+					/>
+				</div>
+				<div class="min-w-56 flex-1">
+					<label for="suspend-reason" class="block font-semibold text-ink">
+						{m.admin_suspend_reason_label()}
+					</label>
+					<input
+						id="suspend-reason"
+						type="text"
+						maxlength="2000"
+						class="mt-1 w-full border border-line bg-bg p-2 text-ink"
+						bind:value={suspendReason}
+					/>
+				</div>
+				<button
+					type="button"
+					disabled={suspendBusy || !suspendUser}
+					onclick={() => setSuspend(true)}
+					class="bg-accent px-4 py-2 text-xs font-semibold text-bg hover:bg-accent-dk disabled:opacity-60"
+				>
+					{m.admin_suspend_on()}
+				</button>
+				<button
+					type="button"
+					disabled={suspendBusy || !suspendUser}
+					onclick={() => setSuspend(false)}
+					class="border border-line px-4 py-2 text-xs font-semibold text-text-2 hover:border-accent hover:text-accent disabled:opacity-60"
+				>
+					{m.admin_unsuspend()}
+				</button>
+			</div>
+			{#if suspendOk}
+				<p class="mt-2 text-sm text-text-2">{m.admin_suspend_done()}</p>
+			{/if}
+			{#if suspendMsg}
+				<p class="mt-2 text-sm text-accent" role="alert">{suspendMsg}</p>
 			{/if}
 		</section>
 
