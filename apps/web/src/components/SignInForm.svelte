@@ -45,6 +45,7 @@ type SubmitState = Pick<typeof form.state, "canSubmit" | "isSubmitting">;
 
 	<form
 		class="space-y-4"
+		novalidate
 		onsubmit={(e) => {
 			e.preventDefault();
 			e.stopPropagation();

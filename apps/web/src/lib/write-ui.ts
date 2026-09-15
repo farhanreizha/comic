@@ -74,6 +74,19 @@ export function mapWriteError(error: unknown): MappedError {
 	}
 }
 
+/** TanStack field meta.errors: strings OR zod issues/objects. Joining raw
+ *  objects renders "[object Object]". Flatten to readable messages. */
+export function fieldErrors(errors: unknown[]): string {
+	return errors
+		.map((e) => {
+			if (typeof e === "string") return e;
+			const o = e as { message?: string };
+			return o?.message ?? "";
+		})
+		.filter(Boolean)
+		.join(", ");
+}
+
 /** Rendered error line: message + the filename the module set, verbatim. */
 export function errorText(mapped: MappedError): string {
 	return mapped.filename
