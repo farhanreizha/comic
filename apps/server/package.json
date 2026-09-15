@@ -8,6 +8,7 @@
 		"compile": "bun build --compile --no-compile-autoload-dotenv --minify --sourcemap --bytecode ./src/index.ts --outfile server",
 		"dev": "bun run --hot src/index.ts",
 		"seed": "bun run seed.ts",
+		"sweep:orphans": "bun run sweep-orphans.ts",
 		"start": "bun run dist/index.mjs",
 		"env:generate": "varlock codegen"
 	},
