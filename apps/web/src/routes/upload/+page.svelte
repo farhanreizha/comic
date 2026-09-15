@@ -301,7 +301,7 @@
 							{files.length === 1 ? files[0].name : `${files.length} × image`}
 							— {formatMB(totalBytes)}
 							{#if tooBig}
-								<span class="text-accent">
+								<span class="text-accent" role="alert">
 									{m.upload_files_too_big({
 										size: formatMB(totalBytes),
 										limit: formatMB(MAX_SEND_BYTES),

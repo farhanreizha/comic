@@ -106,6 +106,7 @@
 	"err_not_found": "Tidak ditemukan.",
 	"err_invalid": "Data yang dikirim tidak valid.",
 	"err_too_large": "Ukuran file melebihi batas.",
+	"err_too_large_limit": "Ukuran file melebihi batas — maksimal {limit} per bab.",
 	"err_limit": "Batas jumlah halaman atau isi arsip terlewat.",
 	"err_conflict": "Sudah ada — tidak bisa diulang.",
 	"upload_title": "Unggah",

@@ -7,6 +7,9 @@
 import { MAX_CHAPTER_BYTES } from "@comic/publishing/types";
 import { m } from "$paraglide/messages.js";
 
+export const formatMB = (bytes: number): string =>
+	`${Math.round(bytes / (1024 * 1024))} MB`;
+
 /** Transport ceiling: above this Bun answers an EMPTY 413 no UI can explain
  *  (apps/server/src/publishing.ts MAX_UPLOAD_BYTES). Same formula, single
  *  constant imported from the module. */
@@ -37,7 +40,10 @@ export function mapWriteError(error: unknown): MappedError {
 		case "BAD_REQUEST":
 			return { message: e.message ? e.message : m.err_invalid(), filename };
 		case "CONTENT_TOO_LARGE":
-			return { message: m.err_too_large(), filename };
+			return {
+				message: m.err_too_large_limit({ limit: formatMB(MAX_CHAPTER_BYTES) }),
+				filename,
+			};
 		case "CONFLICT":
 			return { message: m.err_conflict(), filename };
 		// raw-module codes (the Hono upload route answers these verbatim)
@@ -46,11 +52,25 @@ export function mapWriteError(error: unknown): MappedError {
 		case "INVALID_INPUT":
 			return { message: e.message ? e.message : m.err_invalid(), filename };
 		case "TOO_LARGE":
-			return { message: m.err_too_large(), filename };
+			return {
+				message: m.err_too_large_limit({ limit: formatMB(MAX_CHAPTER_BYTES) }),
+				filename,
+			};
 		case "LIMIT_EXCEEDED":
 			return { message: m.err_limit(), filename };
 		default:
-			return { message: m.error_generic() };
+			// A plain object with a message is a server answer with a
+			// purpose-written line (validation text, "Invalid email or
+			// password" from better-auth) — show it (Nielsen H10). An Error
+			// instance is client-side (network drop, code bug); its raw text
+			// is not user-facing — stay generic.
+			return {
+				message:
+					e && !(e instanceof Error) && e.message
+						? e.message
+						: m.error_generic(),
+				filename,
+			};
 	}
 }
 
@@ -107,6 +127,3 @@ export function xhrUpload(
 		xhr.send(form);
 	});
 }
-
-export const formatMB = (bytes: number): string =>
-	`${Math.round(bytes / (1024 * 1024))} MB`;
