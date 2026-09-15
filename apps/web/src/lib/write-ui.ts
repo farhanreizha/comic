@@ -20,9 +20,12 @@ export function mapWriteError(error: unknown): MappedError {
 	const e = error as {
 		code?: string;
 		message?: string;
+		filename?: string;
 		data?: { filename?: string };
 	};
-	const filename = e?.data?.filename;
+	// oRPC errors nest under `data`; the raw JSON of POST /publish/chapters
+	// answers `filename` top-level (apps/server/src/publishing.ts).
+	const filename = e?.data?.filename ?? e?.filename;
 	switch (e?.code) {
 		// oRPC transport names
 		case "UNAUTHORIZED":
