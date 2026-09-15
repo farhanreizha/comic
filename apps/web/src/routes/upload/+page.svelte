@@ -13,6 +13,16 @@
 
 	let { data } = $props();
 
+	/* $props() is a plain snapshot — assigning onto `data` never re-renders
+	 * (Svelte 5). Comics created this session live in local state and merge
+	 * into the load() list; filter guards a duplicate key if a refetch ever
+	 * lands the same comic in both. */
+	let fresh = $state<typeof data.comics>([]);
+	const comics = $derived([
+		...fresh,
+		...data.comics.filter((c) => !fresh.some((f) => f.id === c.id)),
+	]);
+
 	/* ------------------------------------------------ step 1: create comic */
 	let creating = $state(false);
 	let createMsg = $state<string | null>(null);
@@ -42,7 +52,7 @@
 			form.reset();
 			selectedGenres.clear();
 			// the fresh comic belongs in step 2's selector without a reload
-			data.comics = [comic, ...data.comics];
+			fresh = [comic, ...fresh];
 			targetComic = comic.id;
 		} catch (error) {
 			createMsg = errorText(mapWriteError(error));
@@ -224,7 +234,7 @@
 				<span class="font-sans text-2xl font-extrabold text-accent">02</span>
 				<h2 class="eyebrow">{m.upload_step2()}</h2>
 			</div>
-			{#if data.comics.length === 0}
+			{#if comics.length === 0}
 				<p class="mt-3 text-sm text-text-2">{m.upload_no_comics()}</p>
 			{:else}
 				<form class="mt-4 space-y-4" onsubmit={submitUpload}>
@@ -237,7 +247,7 @@
 							class="mt-1 w-full border border-line bg-bg p-2 text-sm text-ink"
 							bind:value={targetComic}
 						>
-							{#each data.comics as c (c.id)}
+							{#each comics as c (c.id)}
 								<option value={c.id}>{c.title}</option>
 							{/each}
 						</select>
