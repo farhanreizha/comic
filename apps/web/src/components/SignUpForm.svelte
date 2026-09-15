@@ -25,7 +25,7 @@ const form = createForm(() => ({
 			},
 			{
 				onSuccess: () => {
-					goto("/dashboard");
+					goto("/library");
 				},
 				onError: (error) => {
 					console.log(error.error.message || m.error_generic());
