@@ -4,7 +4,7 @@ import { browser } from "$app/environment";
 import { goto } from "$app/navigation";
 import { page } from "$app/state";
 import { client } from "$lib/orpc";
-import { activeWindow } from "$lib/reader";
+import { activeWindow, clampPage } from "$lib/reader";
 import { m } from "$paraglide/messages.js";
 import { ENV } from "../../../varlock-env";
 
@@ -70,7 +70,11 @@ function computeCurrent() {
 function scrollToPage(n: number) {
 	const target = Math.min(Math.max(1, n), totalPages);
 	const el = strip?.children[target - 1] as HTMLElement | undefined;
-	el?.scrollIntoView({ behavior: "smooth", block: "start" });
+	// Smooth scroll across a 40-page gap is a slideshow; snap instead.
+	el?.scrollIntoView({
+		behavior: Math.abs(target - current) > 3 ? "instant" : "smooth",
+		block: "start",
+	});
 	current = target;
 }
 
@@ -117,6 +121,15 @@ $effect(() => {
 });
 
 function onKey(event: KeyboardEvent) {
+	// Escape always closes the jump field — it lands on the input itself.
+	if (event.key === "Escape" && jumpOpen) {
+		jumpOpen = false;
+		jumpInput?.blur();
+		return;
+	}
+	// Don't hijack keys while the jump input (or any field) has focus.
+	const target = event.target as HTMLElement | null;
+	if (target?.closest("input,textarea,select,button")) return;
 	if (event.key === "PageDown" || event.key === " ") {
 		event.preventDefault();
 		advance();
@@ -177,6 +190,26 @@ const progressLabel = $derived(
 	totalPages > 0 ? m.reader_page_of({ page: current, total: totalPages }) : "",
 );
 const comicSlug = $derived(data.comic?.slug ?? "");
+
+/* --- page jump: always-visible number input in the chrome bar --- */
+let jumpOpen = $state(false);
+let jumpValue = $state("");
+let jumpInput: HTMLInputElement | undefined = $state();
+
+function openJump() {
+	jumpValue = "";
+	jumpOpen = true;
+}
+
+$effect(() => {
+	if (jumpOpen) requestAnimationFrame(() => jumpInput?.focus());
+});
+
+function submitJump() {
+	const n = clampPage(Number(jumpValue), totalPages);
+	scrollToPage(n);
+	jumpOpen = false;
+}
 const chapterTitle = $derived(
 	chapter.title || m.detail_chapter_title({ ordinal: chapter.ordinal }),
 );
@@ -199,11 +232,48 @@ const chapterTitle = $derived(
 		>
 			← {chapterTitle}
 		</a>
-		<span class="ml-auto tabular-nums text-reader-decor">{progressLabel}</span>
+		{#if jumpOpen}
+			<form
+				class="ml-auto flex items-center gap-1"
+				novalidate
+				onsubmit={(e) => {
+					e.preventDefault();
+					submitJump();
+				}}
+			>
+				<input
+					bind:this={jumpInput}
+					bind:value={jumpValue}
+					type="number"
+					min="1"
+					max={totalPages}
+					inputmode="numeric"
+					placeholder="1–{totalPages}"
+					aria-label={m.reader_jump_to()}
+					class="w-20 rounded-sm border border-reader-decor/40 bg-reader-chrome px-2 py-1 text-sm tabular-nums text-reader-ink outline-none focus:border-reader-accent"
+				/>
+				<button
+					type="submit"
+					class="bg-reader-accent px-3 py-1 text-sm font-bold text-reader-bg hover:opacity-90"
+				>
+					{m.reader_jump_go()}
+				</button>
+			</form>
+		{:else}
+			<button
+				type="button"
+				class="ml-auto tabular-nums text-reader-decor underline decoration-dotted underline-offset-4 hover:text-reader-accent"
+				onclick={openJump}
+				aria-expanded="false"
+				aria-label={m.reader_jump_to()}
+			>
+				{progressLabel}
+			</button>
+		{/if}
 	</div>
 
 	<!-- progress bar -->
-	<div class="sticky top-[37px] z-40 h-0.5 w-full overflow-hidden bg-reader-chrome" aria-hidden="true">
+	<div class="sticky top-[37px] z-40 h-1.5 w-full overflow-hidden bg-reader-chrome" aria-hidden="true">
 		<div
 			class="h-full bg-reader-accent transition-[width] duration-150"
 			style="width: {totalPages ? Math.min(1, current / totalPages) * 100 : 0}%"
