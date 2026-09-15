@@ -17,7 +17,7 @@ function pick(locale: (typeof locales)[number]) {
 	{#each locales as locale}
 		<button
 			type="button"
-			class="px-1.5 py-0.5 text-xs font-bold tracking-wide uppercase {getLocale() ===
+			class="px-1.5 py-2 text-xs font-bold tracking-wide uppercase {getLocale() ===
 			locale
 				? 'bg-accent text-bg'
 				: 'text-text-2 hover:text-ink'}"

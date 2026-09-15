@@ -61,12 +61,12 @@
 
 	{#if data.gate === "anonymous"}
 		<p class="mt-4 text-sm text-text-2">
-			<a href="/login" class="text-accent hover:underline">{m.apply_signin_prompt()}</a>
+			<a href="/login" class="inline-flex min-h-7 items-center text-accent hover:underline">{m.apply_signin_prompt()}</a>
 		</p>
 	{:else if data.gate === "creator"}
 		<p class="mt-4 text-sm text-ink">
 			{m.apply_already_creator()}
-			<a href="/upload" class="text-accent hover:underline">{m.upload_title()}</a>
+			<a href="/upload" class="inline-flex min-h-7 items-center text-accent hover:underline">{m.upload_title()}</a>
 		</p>
 	{:else}
 		{#if application && statusCopy[application.status]}

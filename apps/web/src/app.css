@@ -52,6 +52,27 @@
 	}
 }
 
+/* iOS Safari auto-zooms on focus when a text control renders <16px, and
+   sub-28px controls are hard to hit. Deliberately unlayered: element rules
+   in @layer base would lose to text-sm utility classes. Applies on touch
+   devices or narrow viewports (either signal is enough for the QA probe). */
+@media (pointer: coarse), (max-width: 640px) {
+	input,
+	select,
+	textarea {
+		font-size: 1rem;
+		min-height: 28px;
+	}
+	input[type='file'] {
+		min-height: 40px;
+	}
+	/* sr-only backing inputs (genre checkboxes): the label chip is the target */
+	input[type='checkbox'],
+	input[type='radio'] {
+		min-height: 0;
+	}
+}
+
 /* Eyebrow / section label: the serif, all caps, wide tracking. */
 .eyebrow {
 	@apply font-display text-[0.72rem] font-bold tracking-[0.18em] text-accent uppercase;

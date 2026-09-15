@@ -221,13 +221,13 @@ async function submitDelete() {
 				<select
 					id={`report-${targetId}`}
 					name="reason"
-					class="border border-line bg-bg px-1 py-0.5 text-text-2"
+					class="border border-line bg-bg px-2 py-1.5 text-text-2"
 				>
 					{#each REPORT_REASONS as [value, label] (value)}
 						<option {value}>{label}</option>
 					{/each}
 				</select>
-				<button type="submit" class="border border-line px-2 py-0.5 text-text-2 hover:border-accent hover:text-accent">
+				<button type="submit" class="border border-line px-2 py-1.5 text-text-2 hover:border-accent hover:text-accent">
 					{m.detail_report_submit()}
 				</button>
 				{#if reportMsg[targetId] === "done"}
@@ -342,7 +342,7 @@ async function submitDelete() {
 {/snippet}
 
 <div class="mx-auto max-w-6xl px-4 py-8">
-	<a href="/" class="eyebrow">{m.detail_back()}</a>
+	<a href="/" class="eyebrow inline-flex min-h-7 items-center">{m.detail_back()}</a>
 	<div class="mt-4 grid gap-8 md:grid-cols-[280px_1fr]">
 		<!-- Visual anchor: cover, or the first page's cover when there is one -->
 		<a href="/read/{firstChapter?.id ?? ''}" class="block">
@@ -530,7 +530,7 @@ async function submitDelete() {
 			<!-- The list below still renders — reads are public; the form is what a
 			     signed-out visitor lacks. -->
 			<p class="mt-2 text-sm text-text-2">
-				<a href="/login" class="text-accent hover:underline">{m.detail_comments_signin_prompt()}</a>
+				<a href="/login" class="inline-flex min-h-7 items-center text-accent hover:underline">{m.detail_comments_signin_prompt()}</a>
 			</p>
 		{/if}
 		{#if !data.comments || data.comments.items.length === 0}
