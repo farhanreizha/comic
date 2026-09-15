@@ -19,7 +19,7 @@ const form = createForm(() => ({
 		await authClient.signIn.email(
 			{ email: value.email, password: value.password },
 			{
-				onSuccess: () => goto("/dashboard"),
+				onSuccess: () => goto("/library"),
 				onError: (error) => {
 					console.log(error.error.message || m.error_generic());
 				},
