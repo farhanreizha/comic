@@ -34,7 +34,7 @@
 		</span>
 		<button
 			onclick={handleSignOut}
-			class="rounded border border-line px-3 py-1 text-sm font-semibold text-accent hover:bg-accent hover:text-bg transition-colors"
+			class="rounded border border-line px-3 py-2 text-sm font-semibold text-accent hover:bg-accent hover:text-bg transition-colors"
 		>
 			{m.nav_signout()}
 		</button>
@@ -43,13 +43,13 @@
 	<div class="flex items-center gap-2">
 		<a
 			href="/login"
-			class="rounded border border-line px-3 py-1 text-sm font-semibold text-text-2 hover:text-ink transition-colors"
+			class="rounded border border-line px-3 py-2 text-sm font-semibold text-text-2 hover:text-ink transition-colors"
 		>
 			{m.nav_signin()}
 		</a>
 		<a
 			href="/login?mode=signup"
-			class="rounded bg-accent px-3 py-1 text-sm font-semibold text-bg transition-colors hover:bg-accent-dk"
+			class="rounded bg-accent px-3 py-2 text-sm font-semibold text-bg transition-colors hover:bg-accent-dk"
 		>
 			{m.nav_signup()}
 		</a>

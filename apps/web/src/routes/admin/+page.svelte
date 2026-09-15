@@ -127,7 +127,7 @@
 	{#if data.gate !== "admin"}
 		<!-- Role gate tripped in the load: honest page, not a blank or a 500. -->
 		<p class="mt-4 text-sm text-ink">{m.admin_denied()}</p>
-		<a href="/" class="mt-2 inline-block text-sm text-accent hover:underline">
+		<a href="/" class="mt-2 inline-flex min-h-7 items-center text-sm text-accent hover:underline">
 			{m.admin_denied_home()}
 		</a>
 	{:else}
@@ -146,14 +146,14 @@
 							<p class="mt-1 whitespace-pre-line text-ink">{a.motivation}</p>
 							<div class="mt-2 flex flex-wrap items-center gap-3 text-text-2">
 								{#if a.portfolioUrl}
-									<a href={a.portfolioUrl} target="_blank" rel="noopener noreferrer" class="text-accent hover:underline">
+									<a href={a.portfolioUrl} target="_blank" rel="noopener noreferrer" class="inline-flex min-h-7 items-center text-accent hover:underline">
 										{m.admin_apps_portfolio()}
 									</a>
 								{/if}
 								{#if a.sampleKey}
 									<a
 										href="{ENV.PUBLIC_SERVER_URL}/admin/applications/{a.id}/sample"
-										class="text-accent hover:underline"
+										class="inline-flex min-h-7 items-center text-accent hover:underline"
 									>
 										{m.admin_apps_sample()}
 									</a>
@@ -214,7 +214,7 @@
 										type="button"
 										disabled={resolveBusy === r.id}
 										onclick={() => resolve(r.id, "hide_comment")}
-										class="border border-line px-3 py-1 text-xs font-semibold text-text-2 hover:border-accent hover:text-accent disabled:opacity-60"
+										class="border border-line px-3 py-2 text-xs font-semibold text-text-2 hover:border-accent hover:text-accent disabled:opacity-60"
 									>
 										{m.admin_hide_comment()}
 									</button>
@@ -223,7 +223,7 @@
 										type="button"
 										disabled={resolveBusy === r.id}
 										onclick={() => resolve(r.id, "take_down_comic")}
-										class="bg-accent px-3 py-1 text-xs font-semibold text-bg hover:bg-accent-dk disabled:opacity-60"
+										class="bg-accent px-3 py-2 text-xs font-semibold text-bg hover:bg-accent-dk disabled:opacity-60"
 									>
 										{m.admin_take_down()}
 									</button>
@@ -232,7 +232,7 @@
 									type="button"
 									disabled={resolveBusy === r.id}
 									onclick={() => resolve(r.id, "dismiss")}
-									class="border border-line px-3 py-1 text-xs font-semibold text-text-2 hover:border-accent hover:text-accent disabled:opacity-60"
+									class="border border-line px-3 py-2 text-xs font-semibold text-text-2 hover:border-accent hover:text-accent disabled:opacity-60"
 								>
 									{m.admin_dismiss()}
 								</button>
