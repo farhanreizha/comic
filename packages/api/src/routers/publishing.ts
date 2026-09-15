@@ -40,6 +40,25 @@ const comicDraft = z.object({
 	visibility: z.enum(["public", "unlisted", "private"]).optional(),
 });
 
+/** Metadata edit — same field vocab as the draft minus slug (URLs are the
+ * public contract; the slug never moves). */
+const comicPatch = z
+	.object({
+		comicId: z.string().min(1),
+		title: z.string().min(1).max(200).optional(),
+		synopsis: z.string().max(5000).nullish(),
+		genres: z.array(z.enum(GENRES)).max(12).optional(),
+		visibility: z.enum(["public", "unlisted", "private"]).optional(),
+	})
+	.refine(
+		(v) =>
+			v.title !== undefined ||
+			v.synopsis !== undefined ||
+			v.genres !== undefined ||
+			v.visibility !== undefined,
+		{ message: "patch requires at least one field" },
+	);
+
 /** oRPC serialises File through its FormData channel; sizes stay advisory —
  * the module sniffs bytes and enforces the real limits. */
 const ingestInput = z.discriminatedUnion("kind", [
@@ -134,6 +153,21 @@ export const publishingRouter = {
 		.input(comicDraft)
 		.handler(async ({ input, context }) =>
 			crossSeam(() => publishingIn(context).createComic(context.viewer, input)),
+		),
+
+	updateComic: o.input(comicPatch).handler(async ({ input, context }) => {
+		const { comicId, ...patch } = input;
+		return crossSeam(() =>
+			publishingIn(context).updateComic(context.viewer, comicId, patch),
+		);
+	}),
+
+	deleteComic: o
+		.input(z.object({ comicId: z.string().min(1) }))
+		.handler(async ({ input, context }) =>
+			crossSeam(() =>
+				publishingIn(context).deleteComic(context.viewer, input.comicId),
+			),
 		),
 
 	ingestChapter: o.input(ingestInput).handler(async ({ input, context }) =>

@@ -583,6 +583,138 @@ describe("publishing — interface tests (docs/design/write-path.md)", () => {
 		expect(data.chapterPages.size).toBe(1);
 	});
 
+	/* ------------------------------------------- updateComic / deleteComic */
+
+	// 15. Owner edits metadata; other creator FORBIDDEN; admin allowed;
+	//     visibility never publishes a draft (decision #2).
+	test("15. updateComic: owner+admin edit, non-owner FORBIDDEN, status untouched", async () => {
+		const { data, publishing } = setup();
+		const card = await publishing.updateComic(OWNER, "c1", {
+			title: "  New Title  ",
+			synopsis: "  ",
+			genres: ["action", "drama"],
+			visibility: "public",
+		});
+		expect(card.title).toBe("New Title");
+		expect(card.genres).toEqual(["action", "drama"]);
+		expect(card.visibility).toBe("public");
+		expect(data.comics.find((c) => c.id === "c1")?.synopsis).toBeNull(); // blank → null
+		// Decision #2: a draft stays a draft — public visibility must not
+		// silently publish it.
+		expect(card.status).toBe("draft");
+
+		const adminCard = await publishing.updateComic(ADMIN, "c1", {
+			title: "Admin Rename",
+		});
+		expect(adminCard.title).toBe("Admin Rename");
+
+		expect(
+			(await errorOf(() => publishing.updateComic(OTHER, "c1", { title: "x" })))
+				.code,
+		).toBe("FORBIDDEN");
+		expect(
+			(
+				await errorOf(() =>
+					publishing.updateComic(READER, "c1", { title: "x" }),
+				)
+			).code,
+		).toBe("FORBIDDEN");
+		expect(
+			(await errorOf(() => publishing.updateComic(ANON, "c1", { title: "x" })))
+				.code,
+		).toBe("UNAUTHENTICATED");
+		expect(
+			(
+				await errorOf(() =>
+					publishing.updateComic(OWNER, "nope", { title: "x" }),
+				)
+			).code,
+		).toBe("NOT_FOUND");
+		// blank title stays INVALID_INPUT (same rule as createComic)
+		expect(
+			(
+				await errorOf(() =>
+					publishing.updateComic(OWNER, "c1", { title: "   " }),
+				)
+			).code,
+		).toBe("INVALID_INPUT");
+		// absent keys stay as-is: title survives a visibility-only patch
+		await publishing.updateComic(OWNER, "c1", { visibility: "private" });
+		expect(data.comics.find((c) => c.id === "c1")?.title).toBe("Admin Rename");
+		expect(data.comics.find((c) => c.id === "c1")?.visibility).toBe("private");
+	});
+
+	// 16. Owner deletes: chapters + pages rows go, all bytes go.
+	test("16. deleteComic: cascade removes chapters, page rows, and storage bytes", async () => {
+		const { data, storage, publishing } = setup();
+		const ch = await publishing.ingestChapter(OWNER, {
+			source: {
+				kind: "archive",
+				upload: cbz({ "p1.png": PNG, "p2.png": WEBP, "p3.png": JPEG }),
+			},
+			target: { kind: "newChapter", comicId: "c1" },
+		});
+		const keys = keysOf(data, ch.id);
+		expect(keys.length).toBe(3);
+		for (const k of keys) expect(await storage.get(k)).not.toBeNull();
+
+		const result = await publishing.deleteComic(OWNER, "c1");
+		expect(result).toEqual({ id: "c1" });
+		expect(data.comics.find((c) => c.id === "c1")).toBeUndefined();
+		expect(data.chapterPages.size).toBe(0);
+		// the memory adapter is EMPTY — every page key was deleted (invariant 5)
+		expect(storage.size()).toBe(0);
+	});
+
+	// 17. deleteComic authorisation mirrors updateComic.
+	test("17. deleteComic: non-owner creator FORBIDDEN; admin can; bytes survive a refused delete", async () => {
+		const { data, storage, publishing } = setup();
+		await publishing.ingestChapter(OWNER, {
+			source: { kind: "images", uploads: [upload("p1.png", PNG)] },
+			target: { kind: "newChapter", comicId: "c1" },
+		});
+		expect(
+			(await errorOf(() => publishing.deleteComic(OTHER, "c1"))).code,
+		).toBe("FORBIDDEN");
+		expect(
+			(await errorOf(() => publishing.deleteComic(READER, "c1"))).code,
+		).toBe("FORBIDDEN");
+		expect((await errorOf(() => publishing.deleteComic(ANON, "c1"))).code).toBe(
+			"UNAUTHENTICATED",
+		);
+		expect(
+			(await errorOf(() => publishing.deleteComic(OWNER, "nope"))).code,
+		).toBe("NOT_FOUND");
+		// refused attempts changed nothing
+		expect(data.comics.length).toBe(1);
+		expect(storage.size()).toBe(1);
+		// admin can
+		await publishing.deleteComic(ADMIN, "c1");
+		expect(data.comics.length).toBe(0);
+		expect(storage.size()).toBe(0);
+	});
+
+	// 18. delete removes only the target comic's bytes; siblings stay.
+	test("18. deleteComic: other comics' chapters and bytes are untouched", async () => {
+		const { data, storage, publishing } = setup([
+			{ id: "c1", slug: "s1", ownerId: "u-owner" },
+			{ id: "c2", slug: "s2", ownerId: "u-owner" },
+		]);
+		await publishing.ingestChapter(OWNER, {
+			source: { kind: "images", uploads: [upload("a.png", PNG)] },
+			target: { kind: "newChapter", comicId: "c1" },
+		});
+		const keep = await publishing.ingestChapter(OWNER, {
+			source: { kind: "images", uploads: [upload("b.png", PNG)] },
+			target: { kind: "newChapter", comicId: "c2" },
+		});
+		await publishing.deleteComic(OWNER, "c1");
+		expect(storage.size()).toBe(1);
+		const keepKeys = keysOf(data, keep.id);
+		for (const k of keepKeys) expect(await storage.get(k)).not.toBeNull();
+		expect(data.chapterPages.size).toBe(1);
+	});
+
 	test("sniff helper agrees with the archive path (WEBP)", () => {
 		expect(sniffImageType(WEBP)).toBe("image/webp");
 		expect(sniffImageType(new Uint8Array([1, 2, 3]))).toBeNull();

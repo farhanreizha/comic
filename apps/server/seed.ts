@@ -125,7 +125,7 @@ async function main() {
 
 	// 3. demo users
 	console.log("creating users...");
-	const admin = await signup("admin@comic.dev", "Admin Comic", "admin");
+	await signup("admin@comic.dev", "Admin Comic", "admin");
 	const budi = await signup("budi@comic.dev", "Budi Santoso", "creator");
 	const siti = await signup("siti@comic.dev", "Siti Rahayu", "creator");
 	const andi = await signup("andi@comic.dev", "Andi Wijaya", "reader");

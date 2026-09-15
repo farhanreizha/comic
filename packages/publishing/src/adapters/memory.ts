@@ -145,5 +145,37 @@ export function createMemoryPublishingData(
 			const ch = chapters.get(id);
 			return ch ? { id, comicId: ch.comicId } : null;
 		},
+		async updateComic(id, patch) {
+			const c = comics.find((x) => x.id === id);
+			if (!c) {
+				const err = new Error(`comic ${id} not found`);
+				(err as { code?: string }).code = "NOT_FOUND";
+				throw err;
+			}
+			if (patch.title !== undefined) c.title = patch.title;
+			if (patch.synopsis !== undefined) c.synopsis = patch.synopsis;
+			if (patch.genres !== undefined) c.genres = [...patch.genres];
+			if (patch.visibility !== undefined) c.visibility = patch.visibility;
+			return toCard(c);
+		},
+		async deleteComic(id) {
+			const idx = comics.findIndex((x) => x.id === id);
+			if (idx === -1) {
+				const err = new Error(`comic ${id} not found`);
+				(err as { code?: string }).code = "NOT_FOUND";
+				throw err;
+			}
+			const storageKeys: string[] = [];
+			for (const [chapterId, ch] of chapters) {
+				if (ch.comicId !== id) continue;
+				for (const p of chapterPages.get(chapterId) ?? []) {
+					storageKeys.push(p.storageKey);
+				}
+				chapters.delete(chapterId);
+				chapterPages.delete(chapterId);
+			}
+			comics.splice(idx, 1);
+			return { storageKeys };
+		},
 	};
 }

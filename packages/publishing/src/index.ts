@@ -14,6 +14,8 @@ import type {
 	ChapterSummary,
 	ComicCard,
 	ComicDraft,
+	ComicPatch,
+	ComicPatchData,
 	IngestInput,
 	NewPageRow,
 	Publishing,
@@ -308,6 +310,54 @@ export function createPublishing(deps: {
 				await cleanup();
 				throw error;
 			}
+		},
+
+		async updateComic(
+			viewer: Viewer,
+			comicId: string,
+			patch: ComicPatch,
+		): Promise<ComicCard> {
+			// Invariant 1: owner-or-admin, NOT_FOUND for hidden/missing.
+			await writableComic(data, viewer, comicId);
+
+			const normalized: ComicPatchData = {};
+			if (patch.title !== undefined) {
+				const title = patch.title.trim();
+				if (!title) throw publishingError("INVALID_INPUT", "title is required");
+				normalized.title = title;
+			}
+			if (patch.synopsis !== undefined) {
+				normalized.synopsis =
+					patch.synopsis === null ? null : patch.synopsis.trim() || null;
+			}
+			if (patch.genres !== undefined) {
+				normalized.genres = [...patch.genres];
+			}
+			// Decision #2: visibility and status stay separate — setting
+			// `public` here NEVER publishes a draft; canView still denies it.
+			if (patch.visibility !== undefined) {
+				normalized.visibility = patch.visibility;
+			}
+			return data.updateComic(comicId, normalized);
+		},
+
+		async deleteComic(
+			viewer: Viewer,
+			comicId: string,
+		): Promise<{ id: string }> {
+			await writableComic(data, viewer, comicId);
+			// Invariant 5 mirrored: rows first (one transaction, DB cascade),
+			// bytes AFTER commit. Orphan bytes on partial failure stay
+			// unreachable — same ceiling the replace-ingest rollback accepts.
+			const { storageKeys } = await data.deleteComic(comicId);
+			for (const key of storageKeys) {
+				try {
+					await files.delete(key);
+				} catch {
+					// lingering old bytes are unreachable — invariant 7's ceiling
+				}
+			}
+			return { id: comicId };
 		},
 	};
 }

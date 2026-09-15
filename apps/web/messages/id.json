@@ -174,5 +174,15 @@
 	"admin_takedown_done": "Status takedown diubah.",
 	"admin_takedown_failed": "Gagal mengubah status takedown.",
 	"report_reason_none": "—",
-	"detail_add_chapter": "Tambah bab"
+	"detail_add_chapter": "Tambah bab",
+	"manage_edit": "Ubah",
+	"manage_edit_submit": "Simpan perubahan",
+	"manage_saved": "Tersimpan",
+	"manage_delete": "Hapus komik",
+	"manage_delete_confirm": "Hapus komik ini beserta SEMUA bab dan halamannya? Tidak bisa dibatalkan.",
+	"manage_visibility": "Visibilitas",
+	"manage_visibility_note": "Visibilitas saja tidak pernah menerbitkan draf.",
+	"visibility_public": "Publik",
+	"visibility_unlisted": "Tersembunyi dari daftar",
+	"visibility_private": "Pribadi"
 }
