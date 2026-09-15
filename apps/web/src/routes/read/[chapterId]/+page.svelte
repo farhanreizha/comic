@@ -156,7 +156,9 @@ function onJump(event: SubmitEvent) {
 	const n = Number.parseInt(jumpValue, 10);
 	if (Number.isFinite(n)) scrollToPage(n);
 	jumpValue = "";
-	nextBar?.focus();
+	// preventScroll: a plain focus() interrupts the smooth scrollIntoView
+	// that scrollToPage just started (Chromium scrolls the focus target in).
+	nextBar?.focus({ preventScroll: true });
 }
 
 function onVisibility() {
