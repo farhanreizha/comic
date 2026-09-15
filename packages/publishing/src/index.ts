@@ -8,6 +8,8 @@ import {
 	naturalCompare,
 	sniffImageType,
 } from "./images";
+import type { PdfRenderer, RenderedPdfPage } from "./pdf";
+import { renderPdfPages } from "./pdf";
 import type {
 	ChapterFilesPort,
 	ChapterSource,
@@ -149,11 +151,39 @@ async function preparedFromArchive(upload: Upload): Promise<PreparedPage[]> {
 	return finishPages(pages, upload.filename);
 }
 
+/** PDF pages arrive in document order; synthetic `${n}.png` names make
+ * finishPages' natural sort a no-op (invariant 3: order is the document's). */
+async function preparedFromPdf(
+	upload: Upload,
+	renderPdf: PdfRenderer,
+): Promise<PreparedPage[]> {
+	let rendered: RenderedPdfPage[];
+	try {
+		rendered = await renderPdf(upload.bytes, upload.filename);
+	} catch (error) {
+		const code = (error as { code?: string }).code;
+		if (code === "TOO_LARGE" || code === "LIMIT_EXCEEDED") throw error;
+		throw publishingError(
+			"INVALID_INPUT",
+			`could not read PDF: ${(error as Error).message}`,
+			upload.filename,
+		);
+	}
+	return finishPages(
+		rendered.map((p, i) => ({
+			contentType: p.contentType,
+			bytes: p.bytes,
+			sourceName: `${i + 1}.png`,
+		})),
+		upload.filename,
+	);
+}
+
 /** Invariant 8, up front: summed payload vs MAX_CHAPTER_BYTES before anything
  * else. Per-image MAX_IMAGE_BYTES applies to loose images; archive members are
  * capped during extraction (the container itself may legitimately exceed it). */
 function assertUploadLimits(source: ChapterSource): void {
-	const uploads = source.kind === "archive" ? [source.upload] : source.uploads;
+	const uploads = source.kind === "images" ? source.uploads : [source.upload];
 	let total = 0;
 	for (const u of uploads) total += u.bytes.length;
 	if (total > MAX_CHAPTER_BYTES) {
@@ -168,8 +198,12 @@ function assertUploadLimits(source: ChapterSource): void {
 export function createPublishing(deps: {
 	data: PublishingDataPort;
 	files: ChapterFilesPort;
+	/** PDF page renderer override (tests / platforms without the native
+	 * canvas prebuilt). Defaults to the lazy pdfjs + @napi-rs/canvas pair. */
+	renderPdf?: PdfRenderer;
 }): Publishing {
 	const { data, files } = deps;
+	const renderPdf = deps.renderPdf ?? renderPdfPages;
 
 	return {
 		async createComic(viewer: Viewer, draft: ComicDraft): Promise<ComicCard> {
@@ -228,7 +262,9 @@ export function createPublishing(deps: {
 			const pages =
 				source.kind === "archive"
 					? await preparedFromArchive(source.upload)
-					: preparedFromImages(source.uploads);
+					: source.kind === "pdf"
+						? await preparedFromPdf(source.upload, renderPdf)
+						: preparedFromImages(source.uploads);
 
 			const chapterId =
 				target.kind === "newChapter" ? newId() : target.chapterId;

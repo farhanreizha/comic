@@ -93,13 +93,23 @@ publishingApp.post("/publish/chapters", async (c) => {
 
 	let source: ChapterSource;
 	try {
-		source =
-			archive instanceof File
-				? { kind: "archive", upload: await uploadOf(archive) }
-				: {
-						kind: "images",
-						uploads: await Promise.all(images.map(uploadOf)),
-					};
+		const upload = archive instanceof File ? await uploadOf(archive) : null;
+		// Bytes decide (invariant 2): "%PDF" magic routes to the PDF seam.
+		const isPdf =
+			!!upload &&
+			upload.bytes.length >= 4 &&
+			upload.bytes[0] === 0x25 &&
+			upload.bytes[1] === 0x50 &&
+			upload.bytes[2] === 0x44 &&
+			upload.bytes[3] === 0x46;
+		source = upload
+			? isPdf
+				? { kind: "pdf", upload }
+				: { kind: "archive", upload }
+			: {
+					kind: "images",
+					uploads: await Promise.all(images.map(uploadOf)),
+				};
 	} catch {
 		return c.json(
 			{ code: "TOO_LARGE", message: "file could not be read" },

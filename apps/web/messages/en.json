@@ -121,7 +121,7 @@
 	"upload_select_comic": "Choose comic",
 	"upload_no_comics": "No comics yet. Create one in step 1 first.",
 	"upload_chapter_title": "Chapter title (optional)",
-	"upload_drop_zone": "Drag a CBZ/ZIP here, or choose a file",
+	"upload_drop_zone": "Drag a CBZ/ZIP/PDF here, or choose a file",
 	"upload_or_images": "…or choose multiple image files",
 	"upload_files_too_big": "Files total {size} — the limit is {limit}. Shrink them before sending.",
 	"upload_progress": "Uploading… {pct}%",

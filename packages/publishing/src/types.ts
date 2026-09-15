@@ -53,6 +53,7 @@ export type ComicPatch = {
 
 export type ChapterSource =
 	| { kind: "archive"; upload: Upload } // CBZ / ZIP
+	| { kind: "pdf"; upload: Upload } // decision #19: pages render to PNG
 	| { kind: "images"; uploads: readonly Upload[] }; // loose page images
 
 export type ChapterTarget =

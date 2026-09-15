@@ -268,7 +268,7 @@
 						/>
 					</div>
 
-					<!-- Drop zone: one CBZ/ZIP, or a multi-file image set -->
+					<!-- Drop zone: one CBZ/ZIP/PDF, or a multi-file image set -->
 					<div
 						class="border border-dashed border-line p-6 text-center transition-colors {dragging ? 'border-accent' : ''}"
 						ondragover={(e) => {
@@ -282,8 +282,8 @@
 						<input
 							id="chapter-archive"
 							type="file"
-							accept=".cbz,.zip,application/zip"
-							class="mt-3 max-w-full text-sm text-text-2"
+				accept=".cbz,.zip,.pdf,application/zip,application/pdf"
+				class="mt-3 max-w-full text-sm text-text-2"
 							onchange={(e) => setFiles((e.target as HTMLInputElement).files)}
 						/>
 						<p class="mt-3 text-xs text-text-2">{m.upload_or_images()}</p>

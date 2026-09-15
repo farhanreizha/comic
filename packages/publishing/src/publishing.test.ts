@@ -1,10 +1,12 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
 import { createMemoryStorage } from "@comic/storage";
 import { zipSync } from "fflate";
 import { createMemoryPublishingData } from "./adapters/memory";
 import { createChapterFilesPort } from "./adapters/storage-files";
 import { sniffImageType } from "./images";
 import { createPublishing } from "./index";
+import { type PdfRenderer, renderPdfPages } from "./pdf";
 import {
 	MAX_CHAPTER_BYTES,
 	MAX_IMAGE_BYTES,
@@ -88,7 +90,10 @@ const ANON: Viewer = { kind: "anonymous" };
 
 /* ------------------------------------------------------------------ harness */
 
-function setup(comics?: { id: string; slug: string; ownerId: string }[]) {
+function setup(
+	comics?: { id: string; slug: string; ownerId: string }[],
+	renderPdf?: NonNullable<Parameters<typeof createPublishing>[0]["renderPdf"]>,
+) {
 	const data = createMemoryPublishingData({
 		comics: (comics ?? [{ id: "c1", slug: "s1", ownerId: "u-owner" }]).map(
 			(c) => ({
@@ -102,7 +107,7 @@ function setup(comics?: { id: string; slug: string; ownerId: string }[]) {
 	});
 	const storage = createMemoryStorage();
 	const files = createChapterFilesPort(storage);
-	const publishing = createPublishing({ data, files });
+	const publishing = createPublishing({ data, files, renderPdf });
 	return { data, storage, files, publishing };
 }
 
@@ -718,5 +723,161 @@ describe("publishing — interface tests (docs/design/write-path.md)", () => {
 	test("sniff helper agrees with the archive path (WEBP)", () => {
 		expect(sniffImageType(WEBP)).toBe("image/webp");
 		expect(sniffImageType(new Uint8Array([1, 2, 3]))).toBeNull();
+	});
+
+	/* ------------------------------------------------------------- PDF source */
+
+	// REAL ghostscript-produced fixtures (decision #19 lists PDF).
+	const FIXTURE_DIR = new URL("../test/fixtures/", import.meta.url);
+	const pdfFixture = (name: string): Upload =>
+		upload(name, new Uint8Array(readFileSync(FIXTURE_DIR.pathname + name)));
+
+	// 19. The default renderer end-to-end: a 3-page PDF ingests into three
+	// PNG pages in document order, with real decoded dimensions.
+	test("19. PDF ingest: pages in document order as PNG rows (real renderer)", async () => {
+		const { publishing, storage, data } = setup(); // default renderPdf
+		const chapter = await publishing.ingestChapter(OWNER, {
+			source: { kind: "pdf", upload: pdfFixture("fixture-3page.pdf") },
+			target: { kind: "newChapter", comicId: "c1" },
+		});
+		expect(chapter.pageCount).toBe(3);
+		const rows = [...(data.chapterPages.get(chapter.id) ?? [])].sort(
+			(a, b) => a.number - b.number,
+		);
+		expect(rows.map((r) => r.number)).toEqual([1, 2, 3]);
+		expect(rows.every((r) => r.contentType === "image/png")).toBe(true);
+		// ghostscript made these pages 612x792, 400x900, 800x200 pt —
+		// scale <= 1 so rendered px == pt here; a wrong order shows up as
+		// wrong dimensions.
+		expect(rows.map((r) => [r.width, r.height])).toEqual([
+			[612, 792],
+			[400, 900],
+			[800, 200],
+		]);
+		for (const r of rows) {
+			const key = r.storageKey;
+			expect(key).toBe(`comics/c1/chapters/${chapter.id}/${r.number}.png`);
+			const stored = await storage.get(key);
+			expect(stored).not.toBeNull();
+			expect(sniffImageType(new Uint8Array(stored!.bytes))).toBe("image/png");
+		}
+	});
+
+	// 20. Encrypted + unparseable PDFs → INVALID_INPUT naming the upload,
+	// with NOTHING written (invariants 5/6 hold via the pre-write rejection).
+	test("20. encrypted/garbage/truncated PDF → INVALID_INPUT, nothing written", async () => {
+		const { publishing, storage, data } = setup();
+		for (const [name, bytes] of [
+			["enc.pdf", readFileSync(FIXTURE_DIR.pathname + "fixture-enc.pdf")],
+			["junk.pdf", new Uint8Array([1, 2, 3, 4, 5, 6])],
+			[
+				"trunc.pdf",
+				readFileSync(FIXTURE_DIR.pathname + "fixture-3page.pdf").subarray(
+					0,
+					100,
+				),
+			],
+		] as const) {
+			const err = await errorOf(() =>
+				publishing.ingestChapter(OWNER, {
+					source: {
+						kind: "pdf",
+						upload: upload(name, new Uint8Array(bytes)),
+					},
+					target: { kind: "newChapter", comicId: "c1" },
+				}),
+			);
+			expect(err.code).toBe("INVALID_INPUT");
+			expect(err.filename).toBe(name);
+		}
+		expect(storage.size()).toBe(0);
+		expect(data.chapterPages.size).toBe(0);
+	});
+
+	// 21. The seam's guards are the renderer's job (same contract as the
+	// archive extractor): renderPdfPages enforces per-page MAX_IMAGE_BYTES
+	// and summed MAX_CHAPTER_BYTES *while rendering* — asserted here on the
+	// real renderer: every page comes back within the cap, and the fixture
+	// renders deterministically (3 pages, page 3 == the 800x200 strip).
+	test("21. real renderer caps pages within MAX_IMAGE_BYTES; ingest page-count guard is pre-write", async () => {
+		const pages = await renderPdfPages(
+			pdfFixture("fixture-3page.pdf").bytes,
+			"fixture-3page.pdf",
+		);
+		expect(pages.length).toBe(3);
+		for (const p of pages) {
+			expect(p.bytes.length).toBeLessThanOrEqual(MAX_IMAGE_BYTES);
+			expect(p.contentType).toBe("image/png");
+		}
+		// Ingest-side LIMIT_EXCEEDED path (finishPages) is shared with
+		// archives — see test 4. A renderer returning over-cap pages hits
+		// the same generic list guard.
+		const many: PdfRenderer = async () =>
+			Array.from({ length: MAX_PAGES_PER_CHAPTER + 1 }, () => ({
+				bytes: PNG,
+				contentType: "image/png" as const,
+			}));
+		const { publishing, storage } = setup(undefined, many);
+		const err = await errorOf(() =>
+			publishing.ingestChapter(OWNER, {
+				source: { kind: "pdf", upload: pdfFixture("fixture-3page.pdf") },
+				target: { kind: "newChapter", comicId: "c1" },
+			}),
+		);
+		expect(err.code).toBe("LIMIT_EXCEEDED");
+		expect(storage.size()).toBe(0);
+	});
+
+	// 22. A renderer returning zero pages is INVALID_INPUT (same empty-
+	// chapter rule as archives); replace-ingest gets batch-scoped keys and
+	// the old bytes are deleted only after the row swap.
+	test("22. empty render → INVALID_INPUT; replace-ingest re-keys and deletes old bytes", async () => {
+		const stub: PdfRenderer = async () => [];
+		const { publishing, storage, data } = setup(undefined, stub);
+		const err = await errorOf(() =>
+			publishing.ingestChapter(OWNER, {
+				source: { kind: "pdf", upload: pdfFixture("fixture-3page.pdf") },
+				target: { kind: "newChapter", comicId: "c1" },
+			}),
+		);
+		expect(err.code).toBe("INVALID_INPUT");
+		expect(err.filename).toBe("fixture-3page.pdf");
+		expect(storage.size()).toBe(0);
+
+		let renderCount = 0;
+		const two: PdfRenderer = async () => {
+			renderCount++;
+			return renderCount === 1
+				? [
+						{ bytes: PNG, contentType: "image/png" as const },
+						{ bytes: PNG_20X10, contentType: "image/png" as const },
+					]
+				: [{ bytes: PNG, contentType: "image/png" as const }];
+		};
+		const p2 = createPublishing({
+			data,
+			files: createChapterFilesPort(storage),
+			renderPdf: two,
+		});
+		const ch = await p2.ingestChapter(OWNER, {
+			source: { kind: "pdf", upload: pdfFixture("fixture-3page.pdf") },
+			target: { kind: "newChapter", comicId: "c1" },
+		});
+		const keys1 = keysOf(data, ch.id);
+		expect(keys1.length).toBe(2);
+		const ch2 = await p2.ingestChapter(ADMIN, {
+			source: { kind: "pdf", upload: pdfFixture("fixture-3page.pdf") },
+			target: { kind: "replaceChapter", chapterId: ch.id },
+		});
+		expect(ch2.id).toBe(ch.id);
+		const keys2 = keysOf(data, ch.id);
+		expect(keys2.length).toBe(1);
+		// New keys live in a batch subdirectory; old keys are gone from both
+		// the rows and storage (deleted after commit, invariant 5).
+		expect(keys2[0]).toContain(`${ch.id}/`);
+		expect(keys2[0]).not.toBe(keys1[0]);
+		for (const k of keys1) {
+			expect(await storage.get(k)).toBeNull();
+		}
 	});
 });
