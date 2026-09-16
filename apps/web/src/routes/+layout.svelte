@@ -1,17 +1,18 @@
 <script lang="ts">
-	import { QueryClientProvider } from "@tanstack/svelte-query";
-	import { page } from "$app/state";
-	import "../app.css";
-	import { queryClient } from "$lib/orpc";
-	import Header from "$components/Header.svelte";
-	import Footer from "$components/Footer.svelte";
-	import UserMenu from "$components/UserMenu.svelte";
-	import LocaleSwitcher from "$components/LocaleSwitcher.svelte";
+import { QueryClientProvider } from "@tanstack/svelte-query";
+import { page } from "$app/state";
+import "../app.css";
+import Footer from "$components/Footer.svelte";
+import Header from "$components/Header.svelte";
+import LocaleSwitcher from "$components/LocaleSwitcher.svelte";
+import ProgressRail from "$components/ProgressRail.svelte";
+import UserMenu from "$components/UserMenu.svelte";
+import { queryClient } from "$lib/orpc";
 
-	const { children, data } = $props();
+const { children, data } = $props();
 
-	// The reader wears its own chrome — keep the app header off that route.
-	const inReader = $derived(page.url.pathname.startsWith("/read/"));
+// The reader wears its own chrome — keep the app header off that route.
+const inReader = $derived(page.url.pathname.startsWith("/read/"));
 </script>
 
 <QueryClientProvider client={queryClient}>
@@ -29,4 +30,5 @@
 			<Footer />
 		</div>
 	{/if}
+	<ProgressRail />
 </QueryClientProvider>
