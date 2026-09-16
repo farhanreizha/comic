@@ -58,7 +58,7 @@ $effect(() => {
 				id="browse-search"
 				type="search"
 				bind:value={searchBox}
-				placeholder={m.browse_search_placeholder()}
+				placeholder={m.keyboard_search_placeholder()}
 				class="w-full min-w-0 border border-line bg-bg px-3 py-2 text-sm text-ink placeholder:text-text-2 focus:border-accent focus:outline-none sm:w-64"
 			/>
 		</form>
@@ -86,4 +86,7 @@ $effect(() => {
 		<!-- page1 catches internally; unreachable in practice. -->
 		<p class="py-16 text-center text-text-2">{m.browse_empty()}</p>
 	{/await}
+
+	<!-- Issue #43: keyboard hint footer -->
+	<p class="py-4 text-center text-xs text-text-2 opacity-60">{m.keyboard_grid_hint()}</p>
 </div>

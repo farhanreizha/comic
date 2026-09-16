@@ -172,6 +172,16 @@ onMount(() => {
 	};
 	window.addEventListener("scroll", onScroll, { passive: true });
 	document.addEventListener("visibilitychange", onVisibility);
+
+	// Issue #43: show keyboard hint on first reader visit
+	if (!sessionStorage.getItem("reader-hint-shown")) {
+		sessionStorage.setItem("reader-hint-shown", "1");
+		const hint = document.getElementById("reader-hint");
+		if (hint) {
+			setTimeout(() => hint.remove(), 3000);
+		}
+	}
+
 	return () => {
 		window.removeEventListener("scroll", onScroll);
 		document.removeEventListener("visibilitychange", onVisibility);
@@ -383,5 +393,15 @@ const chapterTitle = $derived(
 				{m.reader_back_to_comic()}
 			</a>
 		</div>
+	</div>
+</div>
+
+<!-- Issue #43: keyboard hint overlay (first visit, 3s auto-dismiss) -->
+<div
+	id="reader-hint"
+	class="pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center pt-6"
+>
+	<div class="bg-reader-accent px-4 py-2 text-sm text-reader-bg shadow-lg">
+		{m.keyboard_reader_hint()}
 	</div>
 </div>

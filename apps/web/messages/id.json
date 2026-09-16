@@ -211,5 +211,8 @@
 	"dashboard_menu": "Menu dasbor",
 	"dashboard_comics_soon": "Daftar komik kamu akan muncul di sini.",
 	"dashboard_upload_soon": "Form unggah bab akan pindah ke sini.",
-	"dashboard_placeholder_note": "Halaman ini sedang dibangun."
+	"dashboard_placeholder_note": "Halaman ini sedang dibangun.",
+	"keyboard_grid_hint": "Tekan ↑↓←→ untuk navigasi, Enter untuk buka",
+	"keyboard_reader_hint": "Tekan ←→ untuk halaman sebelum/lanjut, Esc untuk keluar",
+	"keyboard_search_placeholder": "Cari komik (tekan / untuk fokus)"
 }
