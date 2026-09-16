@@ -490,7 +490,24 @@ async function submitDelete() {
 			{/if}
 		</div>
 		{#if chapters.length === 0}
-			<p class="mt-2 text-sm text-text-2">{m.detail_no_chapters()}</p>
+			<!-- Empty state (issue #41): centered, book icon, owner-only CTA.
+			     canManage already means admin-or-owner (see +page.server.ts). -->
+			<div class="mt-3 flex flex-col items-center gap-3 border border-line bg-surface/40 px-4 py-12 text-center">
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="size-10 text-accent" aria-hidden="true">
+					<path d="M2 3.5A1.5 1.5 0 0 1 3.5 2H12v18H3.5A1.5 1.5 0 0 1 2 18.5z" />
+					<path d="M22 3.5A1.5 1.5 0 0 0 20.5 2H12v18h8.5a1.5 1.5 0 0 0 1.5-1.5z" />
+				</svg>
+				<p class="font-display text-lg font-semibold text-ink">{m.detail_empty_heading()}</p>
+				<p class="text-sm text-text-2">{m.detail_empty_text()}</p>
+				{#if data.canManage}
+					<a
+						href="/upload?comic={detail.id}"
+						class="mt-1 bg-accent px-5 py-2 text-sm font-semibold text-bg transition-colors hover:bg-accent-dk"
+					>
+						{m.detail_empty_cta()}
+					</a>
+				{/if}
+			</div>
 		{:else}
 			<ol class="mt-3 divide-y divide-line border-y border-line">
 				{#each chapters as ch (ch.id)}
