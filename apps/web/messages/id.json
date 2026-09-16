@@ -134,6 +134,7 @@
 	"upload_or_images": "…atau pilih banyak file gambar",
 	"upload_files_too_big": "Total file {size} — batas {limit}. Perkecil dulu sebelum kirim.",
 	"upload_progress": "Mengunggah… {pct}%",
+	"upload_processing": "Memproses…",
 	"upload_submit": "Kirim bab",
 	"upload_done": "Bab terunggah: {title}",
 	"upload_image_limit": "Maksimal {n} gambar per bab.",
