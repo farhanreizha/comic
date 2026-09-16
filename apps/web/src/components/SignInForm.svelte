@@ -88,6 +88,10 @@ type SubmitState = Pick<typeof form.state, "canSubmit" | "isSubmitting">;
 			{/snippet}
 		</form.Field>
 
+		<div class="text-right text-sm">
+			<a class="text-accent hover:text-accent-dk" href="/reset-password">{m.auth_forgot_password()}</a>
+		</div>
+
 		<form.Subscribe selector={(state: typeof form.state): SubmitState => ({ canSubmit: state.canSubmit, isSubmitting: state.isSubmitting })}>
 			{#snippet children(state: SubmitState)}
 				<Button type="submit" class="w-full" disabled={!state.canSubmit || state.isSubmitting}>
