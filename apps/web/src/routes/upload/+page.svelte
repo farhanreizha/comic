@@ -151,7 +151,7 @@ async function submitUpload(e: SubmitEvent) {
 
 	{#if data.gate === "anonymous"}
 		<p class="mt-4 text-sm text-text-2">
-			<a href="/login" class="inline-flex min-h-7 items-center text-accent hover:underline">{m.upload_signin_prompt()}</a>
+			<a href="/auth" class="inline-flex min-h-7 items-center text-accent hover:underline">{m.upload_signin_prompt()}</a>
 		</p>
 	{:else if data.gate === "reader"}
 		<p class="mt-4 text-sm text-ink">{m.upload_apply_cta()}</p>
