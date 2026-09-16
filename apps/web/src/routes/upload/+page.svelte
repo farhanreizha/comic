@@ -1,141 +1,145 @@
 <script lang="ts">
-	import { GENRES, genreLabel, type Genre } from "$lib/genres";
-	import { client } from "$lib/orpc";
-	import {
-		errorText,
-		formatMB,
-		mapWriteError,
-		MAX_SEND_BYTES,
-		xhrUpload,
-	} from "$lib/write-ui";
-	import { m } from "$paraglide/messages.js";
-	import { ENV } from "../../varlock-env";
+import { GENRES, type Genre, genreLabel } from "$lib/genres";
+import { client } from "$lib/orpc";
+import {
+	errorText,
+	formatMB,
+	MAX_SEND_BYTES,
+	mapWriteError,
+	xhrUpload,
+} from "$lib/write-ui";
+import { m } from "$paraglide/messages.js";
+import { ENV } from "../../varlock-env";
 
-	let { data } = $props();
+let { data } = $props();
 
-	/* $props() is a plain snapshot — assigning onto `data` never re-renders
-	 * (Svelte 5). Comics created this session live in local state and merge
-	 * into the load() list; filter guards a duplicate key if a refetch ever
-	 * lands the same comic in both. */
-	let fresh = $state<typeof data.comics>([]);
-	const comics = $derived([
-		...fresh,
-		...data.comics.filter((c) => !fresh.some((f) => f.id === c.id)),
-	]);
+/* $props() is a plain snapshot — assigning onto `data` never re-renders
+ * (Svelte 5). Comics created this session live in local state and merge
+ * into the load() list; filter guards a duplicate key if a refetch ever
+ * lands the same comic in both. */
+let fresh = $state<typeof data.comics>([]);
+const comics = $derived([
+	...fresh,
+	...data.comics.filter((c) => !fresh.some((f) => f.id === c.id)),
+]);
 
-	/* ------------------------------------------------ step 1: create comic */
-	let creating = $state(false);
-	let createMsg = $state<string | null>(null);
-	let createOk = $state<string | null>(null);
-	/* `$state<Set>` proxies don't make .has()/.add() deep-reactive in Svelte
-	 * 5.57 (proven in admin queues 2cca24c + upload e2e) — reassign a fresh
-	 * Set so the chip class binding re-reads and re-renders. */
-	let selectedGenres = $state<Set<Genre>>(new Set());
+/* ------------------------------------------------ step 1: create comic */
+let creating = $state(false);
+let createMsg = $state<string | null>(null);
+let createOk = $state<string | null>(null);
+/* `$state<Set>` proxies don't make .has()/.add() deep-reactive in Svelte
+ * 5.57 (proven in admin queues 2cca24c + upload e2e) — reassign a fresh
+ * Set so the chip class binding re-reads and re-renders. */
+let selectedGenres = $state<Set<Genre>>(new Set());
 
-	function toggleGenre(g: Genre) {
-		selectedGenres = selectedGenres.has(g)
-			? new Set([...selectedGenres].filter((x) => x !== g))
-			: new Set([...selectedGenres, g]);
+function toggleGenre(g: Genre) {
+	selectedGenres = selectedGenres.has(g)
+		? new Set([...selectedGenres].filter((x) => x !== g))
+		: new Set([...selectedGenres, g]);
+}
+
+async function submitCreate(e: SubmitEvent) {
+	e.preventDefault();
+	if (creating) return;
+	const form = e.target as HTMLFormElement;
+	const fd = new FormData(form);
+	creating = true;
+	createMsg = null;
+	createOk = null;
+	try {
+		const comic = await client.publishing.createComic({
+			title: String(fd.get("title") ?? "").trim(),
+			synopsis: String(fd.get("synopsis") ?? "").trim() || null,
+			genres: [...selectedGenres],
+		});
+		createOk = comic.title;
+		form.reset();
+		selectedGenres = new Set();
+		// the fresh comic belongs in step 2's selector without a reload
+		fresh = [comic, ...fresh];
+		targetComic = comic.id;
+	} catch (error) {
+		createMsg = errorText(mapWriteError(error));
+	} finally {
+		creating = false;
 	}
+}
 
-	async function submitCreate(e: SubmitEvent) {
-		e.preventDefault();
-		if (creating) return;
-		const form = e.target as HTMLFormElement;
-		const fd = new FormData(form);
-		creating = true;
-		createMsg = null;
-		createOk = null;
-		try {
-			const comic = await client.publishing.createComic({
-				title: String(fd.get("title") ?? "").trim(),
-				synopsis: String(fd.get("synopsis") ?? "").trim() || null,
-				genres: [...selectedGenres],
-			});
-			createOk = comic.title;
-			form.reset();
-			selectedGenres = new Set();
-			// the fresh comic belongs in step 2's selector without a reload
-			fresh = [comic, ...fresh];
-			targetComic = comic.id;
-		} catch (error) {
-			createMsg = errorText(mapWriteError(error));
-		} finally {
-			creating = false;
-		}
+/* ------------------------------------------------ step 2: upload chapter */
+let targetComic = $state<string>("");
+let dragging = $state(false);
+let archive = $state<File | null>(null);
+let images = $state<File[]>([]);
+let progress = $state<number | null>(null);
+let uploadMsg = $state<string | null>(null);
+let uploadOk = $state<string | null>(null);
+
+const files = $derived(archive ? [archive] : images);
+const totalBytes = $derived(files.reduce((n, f) => n + f.size, 0));
+/** Bytes are all sent (bar pegged at 100%) but the response hasn't
+ *  landed — server is still ingesting (extract + decode + write, 5-30s).
+ *  "Uploading… 100%" during that window reads as a hung UI (#40). */
+const processing = $derived(progress === 1);
+/** Client pre-check: past the transport ceiling the server answers an
+ *  empty 413 no UI can explain — refuse before sending (app-ui.md). */
+const tooBig = $derived(totalBytes > MAX_SEND_BYTES);
+
+function setFiles(list: FileList | null) {
+	if (!list || list.length === 0) return;
+	if (list.length === 1) {
+		archive = list[0];
+		images = [];
+	} else {
+		images = [...list];
+		archive = null;
 	}
+	uploadMsg = null;
+	uploadOk = null;
+}
 
-	/* ------------------------------------------------ step 2: upload chapter */
-	let targetComic = $state<string>("");
-	let dragging = $state(false);
-	let archive = $state<File | null>(null);
-	let images = $state<File[]>([]);
-	let progress = $state<number | null>(null);
-	let uploadMsg = $state<string | null>(null);
-	let uploadOk = $state<string | null>(null);
+function onDrop(e: DragEvent) {
+	e.preventDefault();
+	dragging = false;
+	setFiles(e.dataTransfer?.files ?? null);
+}
 
-	const files = $derived(archive ? [archive] : images);
-	const totalBytes = $derived(files.reduce((n, f) => n + f.size, 0));
-	/** Client pre-check: past the transport ceiling the server answers an
-	 *  empty 413 no UI can explain — refuse before sending (app-ui.md). */
-	const tooBig = $derived(totalBytes > MAX_SEND_BYTES);
-
-	function setFiles(list: FileList | null) {
-		if (!list || list.length === 0) return;
-		if (list.length === 1) {
-			archive = list[0];
-			images = [];
-		} else {
-			images = [...list];
-			archive = null;
-		}
-		uploadMsg = null;
-		uploadOk = null;
+async function submitUpload(e: SubmitEvent) {
+	e.preventDefault();
+	if (progress !== null || !targetComic || files.length === 0) return;
+	if (tooBig) {
+		uploadMsg = m.upload_files_too_big({
+			size: formatMB(totalBytes),
+			limit: formatMB(MAX_SEND_BYTES),
+		});
+		return;
 	}
+	uploadMsg = null;
+	uploadOk = null;
+	const form = new FormData();
+	form.set("comicId", targetComic);
+	const title = String(
+		new FormData(e.target as HTMLFormElement).get("chapterTitle") ?? "",
+	).trim();
+	if (title) form.set("title", title);
+	if (archive) form.set("archive", archive);
+	else for (const f of images) form.append("images", f);
 
-	function onDrop(e: DragEvent) {
-		e.preventDefault();
-		dragging = false;
-		setFiles(e.dataTransfer?.files ?? null);
+	progress = 0;
+	const outcome = await xhrUpload(
+		`${ENV.PUBLIC_SERVER_URL}/publish/chapters`,
+		form,
+		(f) => (progress = Math.min(f, 1)),
+	);
+	progress = null;
+	if (outcome.ok) {
+		const ch = outcome.json as { title?: string };
+		uploadOk = m.upload_done({ title: ch.title ?? "" });
+		archive = null;
+		images = [];
+	} else {
+		uploadMsg = errorText(mapWriteError(outcome.error));
 	}
-
-	async function submitUpload(e: SubmitEvent) {
-		e.preventDefault();
-		if (progress !== null || !targetComic || files.length === 0) return;
-		if (tooBig) {
-			uploadMsg = m.upload_files_too_big({
-				size: formatMB(totalBytes),
-				limit: formatMB(MAX_SEND_BYTES),
-			});
-			return;
-		}
-		uploadMsg = null;
-		uploadOk = null;
-		const form = new FormData();
-		form.set("comicId", targetComic);
-		const title = String(
-			new FormData(e.target as HTMLFormElement).get("chapterTitle") ?? "",
-		).trim();
-		if (title) form.set("title", title);
-		if (archive) form.set("archive", archive);
-		else for (const f of images) form.append("images", f);
-
-		progress = 0;
-		const outcome = await xhrUpload(
-			`${ENV.PUBLIC_SERVER_URL}/publish/chapters`,
-			form,
-			(f) => (progress = Math.min(f, 1)),
-		);
-		progress = null;
-		if (outcome.ok) {
-			const ch = outcome.json as { title?: string };
-			uploadOk = m.upload_done({ title: ch.title ?? "" });
-			archive = null;
-			images = [];
-		} else {
-			uploadMsg = errorText(mapWriteError(outcome.error));
-		}
-	}
+}
 </script>
 
 <svelte:head>
@@ -313,11 +317,22 @@
 
 					{#if progress !== null}
 						<!-- Real XHR upload progress; cream track, crimson fill -->
-						<div class="h-2 w-full border border-line" role="progressbar" aria-valuenow={Math.round(progress * 100)}>
+						<div
+							class="h-2 w-full overflow-hidden border border-line"
+							role="progressbar"
+							aria-valuemin={0}
+							aria-valuemax={100}
+							aria-valuenow={Math.round(progress * 100)}
+							aria-valuetext={processing
+								? m.upload_processing()
+								: m.upload_progress({ pct: Math.round(progress * 100) })}
+						>
 							<div class="h-full bg-accent" style="width: {Math.round(progress * 100)}%"></div>
 						</div>
 						<p class="text-sm text-text-2">
-							{m.upload_progress({ pct: Math.round(progress * 100) })}
+							{processing
+								? m.upload_processing()
+								: m.upload_progress({ pct: Math.round(progress * 100) })}
 						</p>
 					{:else}
 						<button

@@ -135,6 +135,7 @@
 	"upload_or_images": "…or choose multiple image files",
 	"upload_files_too_big": "Files total {size} — the limit is {limit}. Shrink them before sending.",
 	"upload_progress": "Uploading… {pct}%",
+	"upload_processing": "Processing…",
 	"upload_submit": "Send chapter",
 	"upload_done": "Chapter uploaded: {title}",
 	"upload_image_limit": "At most {n} images per chapter.",
