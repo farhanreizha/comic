@@ -569,7 +569,7 @@ async function submitDelete() {
 			<!-- The list below still renders — reads are public; the form is what a
 			     signed-out visitor lacks. -->
 			<p class="mt-2 text-sm text-text-2">
-				<a href="/login" class="inline-flex min-h-7 items-center text-accent hover:underline">{m.detail_comments_signin_prompt()}</a>
+				<a href="/auth" class="inline-flex min-h-7 items-center text-accent hover:underline">{m.detail_comments_signin_prompt()}</a>
 			</p>
 		{/if}
 		{#if !data.comments || data.comments.items.length === 0}
