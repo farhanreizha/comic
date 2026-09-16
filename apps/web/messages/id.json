@@ -87,6 +87,7 @@
 	"auth_submitting": "Mengirim…",
 	"auth_invalid_email": "Email tidak valid",
 	"auth_password_required": "Kata sandi wajib diisi",
+	"auth_forgot_password": "Lupa kata sandi?",
 	"auth_name_min": "Nama minimal 2 karakter",
 	"auth_password_min": "Kata sandi minimal 8 karakter",
 	"auth_need_account": "Belum punya akun? Daftar",

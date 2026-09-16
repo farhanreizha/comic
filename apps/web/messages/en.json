@@ -87,6 +87,7 @@
 	"auth_submitting": "Submitting…",
 	"auth_invalid_email": "Invalid email address",
 	"auth_password_required": "Password is required",
+	"auth_forgot_password": "Forgot password?",
 	"auth_name_min": "Name must be at least 2 characters",
 	"auth_password_min": "Password must be at least 8 characters",
 	"auth_need_account": "Need an account? Sign up",
