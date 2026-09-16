@@ -211,5 +211,8 @@
 	"dashboard_menu": "Dashboard menu",
 	"dashboard_comics_soon": "Your comic list will appear here.",
 	"dashboard_upload_soon": "The chapter upload form moves here.",
-	"dashboard_placeholder_note": "This page is under construction."
+	"dashboard_placeholder_note": "This page is under construction.",
+	"keyboard_grid_hint": "Press ↑↓←→ to navigate, Enter to open",
+	"keyboard_reader_hint": "Press ←→ for prev/next page, Esc to exit",
+	"keyboard_search_placeholder": "Search comics (press / to focus)"
 }
