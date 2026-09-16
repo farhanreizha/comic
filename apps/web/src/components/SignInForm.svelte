@@ -4,7 +4,7 @@ import { z } from "zod";
 import { goto } from "$app/navigation";
 import { Button, Input } from "$components/ui";
 import { authClient } from "$lib/auth-client";
-import { mapWriteError } from "$lib/write-ui";
+import { fieldErrors, mapWriteError } from "$lib/write-ui";
 import { m } from "$paraglide/messages.js";
 
 let { switchToSignUp } = $props<{ switchToSignUp: () => void }>();
@@ -34,6 +34,8 @@ const form = createForm(() => ({
 	},
 	validators: {
 		onSubmit: validationSchema,
+		// Issue #44: run zod on keystroke, not only on blur/submit.
+		onChange: validationSchema,
 	},
 }));
 
@@ -65,7 +67,7 @@ type SubmitState = Pick<typeof form.state, "canSubmit" | "isSubmitting">;
 						const target = e.target as HTMLInputElement;
 						field.handleChange(target.value);
 					}}
-					error={field.state.meta.isTouched ? field.state.meta.errors.join(", ") : undefined}
+					error={fieldErrors(field.state.meta.errors) || undefined}
 				/>
 			{/snippet}
 		</form.Field>
@@ -83,7 +85,7 @@ type SubmitState = Pick<typeof form.state, "canSubmit" | "isSubmitting">;
 						const target = e.target as HTMLInputElement;
 						field.handleChange(target.value);
 					}}
-					error={field.state.meta.isTouched ? field.state.meta.errors.join(", ") : undefined}
+					error={fieldErrors(field.state.meta.errors) || undefined}
 				/>
 			{/snippet}
 		</form.Field>
