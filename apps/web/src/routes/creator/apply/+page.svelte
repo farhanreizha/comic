@@ -61,7 +61,7 @@
 
 	{#if data.gate === "anonymous"}
 		<p class="mt-4 text-sm text-text-2">
-			<a href="/login" class="inline-flex min-h-7 items-center text-accent hover:underline">{m.apply_signin_prompt()}</a>
+			<a href="/auth" class="inline-flex min-h-7 items-center text-accent hover:underline">{m.apply_signin_prompt()}</a>
 		</p>
 	{:else if data.gate === "creator"}
 		<p class="mt-4 text-sm text-ink">
