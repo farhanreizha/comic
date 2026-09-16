@@ -1,4 +1,5 @@
 import { appRouter } from "@comic/api/routers/index";
+import { serveStatic } from "@hono/node-server/serve-static";
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
 import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
 import { onError } from "@orpc/server";
@@ -25,6 +26,15 @@ app.use(
 		allowMethods: ["GET", "POST", "OPTIONS"],
 		allowHeaders: ["Content-Type", "Authorization"],
 		credentials: true,
+	}),
+);
+
+// Serve storage files (comic covers, page images)
+app.use(
+	"/storage/*",
+	serveStatic({
+		root: env.STORAGE_DIR ?? "./.storage",
+		rewriteRequestPath: (path: string) => path.replace(/^\/storage/, ""),
 	}),
 );
 

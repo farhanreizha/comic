@@ -44,17 +44,20 @@
 		"prepare": "husky"
 	},
 	"dependencies": {
+		"@hono/node-server": "^2.1.1",
 		"zod": "catalog:"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.12",
 		"@comic/config": "workspace:*",
+		"@playwright/test": "^1.63.0",
 		"@types/bun": "catalog:",
+		"husky": "^9.1.7",
+		"lint-staged": "^17.5.0",
+		"playwright": "^1.63.0",
 		"turbo": "^2.10.12",
 		"typescript": "catalog:",
-		"varlock": "catalog:",
-		"husky": "^9.1.7",
-		"lint-staged": "^17.5.0"
+		"varlock": "catalog:"
 	},
 	"packageManager": "bun@1.4.0",
 	"lint-staged": {
