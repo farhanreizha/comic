@@ -1,46 +1,19 @@
 <script lang="ts">
-import { createInfiniteQuery } from "@tanstack/svelte-query";
 import { browser } from "$app/environment";
 import { goto } from "$app/navigation";
 import { page } from "$app/state";
-import ComicCard from "$components/ComicCard.svelte";
+import BrowseResults from "$components/BrowseResults.svelte";
+import GridSkeleton from "$components/GridSkeleton.svelte";
 import { GENRES, type Genre, genreLabel } from "$lib/genres";
-import { orpc } from "$lib/orpc";
 import { m } from "$paraglide/messages.js";
 
-// Server load fetched page 1 for the current URL (q/genre/cursor). The
-// infinite query seeds from it and only "load more" runs client-side.
+// Issue #42: the toolbar paints instantly; the first catalogue page streams
+// as a pending promise (data.page1) and swaps the skeleton on resolve.
 let { data } = $props();
 
 const q = $derived(page.url.searchParams.get("q") ?? "");
 const genre = $derived(
 	(page.url.searchParams.get("genre") ?? "") as Genre | "",
-);
-const cursor = $derived(page.url.searchParams.get("cursor") ?? undefined);
-
-type CardLike = import("$components/ComicCard.svelte").CardComic;
-/** One catalogue page: exactly what the route's load returned, minus layout keys. */
-type BrowsePage = { items: typeof data.items; nextCursor: string | null };
-
-const browse = createInfiniteQuery(() =>
-	orpc.reading.browse.infiniteOptions({
-		input: (nextCursor: string | undefined) => ({
-			q: q || undefined,
-			genre: genre || undefined,
-			cursor: nextCursor,
-			limit: 20,
-		}),
-		initialPageParam: cursor,
-		getNextPageParam: (last: BrowsePage) => last.nextCursor ?? undefined,
-		initialData: () => ({
-			pages: [{ items: data.items, nextCursor: data.nextCursor }] as BrowsePage[],
-			pageParams: [cursor] as (string | undefined)[],
-		}),
-	}),
-);
-
-const items = $derived(
-	(browse.data?.pages ?? []).flatMap((p) => p.items as CardLike[]),
 );
 
 let searchBox = $state("");
@@ -103,25 +76,14 @@ $effect(() => {
 		</select>
 	</div>
 
-	{#if items.length === 0}
+	{#await data.page1}
+		<!-- Issue #42: shell paints instantly; skeleton covers the streamed
+		     first page (its 150ms fade keeps fast resolves flash-free). -->
+		<GridSkeleton />
+	{:then page1}
+		<BrowseResults {page1} />
+	{:catch}
+		<!-- page1 catches internally; unreachable in practice. -->
 		<p class="py-16 text-center text-text-2">{m.browse_empty()}</p>
-	{:else}
-		<div class="grid grid-cols-2 gap-4 py-8 sm:grid-cols-4 sm:gap-6">
-			{#each items as comic (comic.slug)}
-				<ComicCard {comic} />
-			{/each}
-		</div>
-		{#if browse.hasNextPage}
-			<div class="pb-12 text-center">
-				<button
-					type="button"
-					onclick={() => browse.fetchNextPage()}
-					disabled={browse.isFetchingNextPage}
-					class="border border-accent px-6 py-2 text-sm font-semibold text-accent transition-colors hover:bg-accent hover:text-bg disabled:opacity-50"
-				>
-					{m.browse_load_more()}
-				</button>
-			</div>
-		{/if}
-	{/if}
+	{/await}
 </div>

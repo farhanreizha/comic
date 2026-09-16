@@ -3,9 +3,12 @@ import { serverClient } from "$lib/orpc.server";
 import type { PageServerLoad } from "./$types";
 
 /**
- * Comic + chapters + (for a viewer) shelf/follow/rating/comments, all
- * server-rendered. The booleans below are the initial state the toggles
- * start from — the truth comes from the server, never from localStorage.
+ * Comic + chapters (the visual anchor) are awaited so 404/403 status codes
+ * survive a direct hit. Shelf/follow/rating/comments return as ONE pending
+ * promise: SvelteKit streams it (issue #42), so the cover and metadata paint
+ * immediately and {#await} in +page.svelte swaps the skeleton on resolve.
+ * Every call .catches internally — the streamed promise never rejects, which
+ * keeps the "unhandled rejection during stream" footgun impossible.
  */
 export const load: PageServerLoad = async ({ params, cookies }) => {
 	const client = serverClient(cookies);
@@ -32,26 +35,24 @@ export const load: PageServerLoad = async ({ params, cookies }) => {
 		(me.role === "admin" ||
 			(me.id !== null && me.id === read.comic.creator.id));
 
+	const comicId = read.comic.id;
+	const creatorId = read.comic.creator.id;
+
 	// Ruling 2026-09-14: comment reads are public. The list renders for
 	// anonymous too — only the write-side state (rating) stays signed-in.
-	const [comments, rating, saved, following] = await Promise.all([
-		client.social
-			.listComments({ comicId: read.comic.id, limit: 20 })
-			.catch(() => null),
-		signedIn
-			? client.social
-					.ratingSummary({ comicId: read.comic.id })
-					.catch(() => null)
-			: null,
-		signedIn
-			? client.reading.isSaved({ comicId: read.comic.id }).catch(() => false)
-			: false,
-		signedIn
-			? client.social
-					.isFollowing({ creatorId: read.comic.creator.id })
-					.catch(() => false)
-			: false,
-	]);
+	const aux = (async () => {
+		const [comments, rating, saved, following] = await Promise.all([
+			client.social.listComments({ comicId, limit: 20 }).catch(() => null),
+			signedIn
+				? client.social.ratingSummary({ comicId }).catch(() => null)
+				: null,
+			signedIn ? client.reading.isSaved({ comicId }).catch(() => false) : false,
+			signedIn
+				? client.social.isFollowing({ creatorId }).catch(() => false)
+				: false,
+		]);
+		return { comments, rating, saved, following };
+	})();
 
 	return {
 		comic: read.comic,
@@ -59,9 +60,6 @@ export const load: PageServerLoad = async ({ params, cookies }) => {
 		chapters: read.chapters,
 		signedIn,
 		canManage,
-		rating,
-		comments,
-		saved,
-		following,
+		aux,
 	};
 };
