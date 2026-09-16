@@ -205,5 +205,11 @@
 	"manage_visibility_note": "Visibilitas saja tidak pernah menerbitkan draf.",
 	"visibility_public": "Publik",
 	"visibility_unlisted": "Tersembunyi dari daftar",
-	"visibility_private": "Pribadi"
+	"visibility_private": "Pribadi",
+	"dashboard_my_comics": "Komik Saya",
+	"dashboard_view_site": "Lihat Situs",
+	"dashboard_menu": "Menu dasbor",
+	"dashboard_comics_soon": "Daftar komik kamu akan muncul di sini.",
+	"dashboard_upload_soon": "Form unggah bab akan pindah ke sini.",
+	"dashboard_placeholder_note": "Halaman ini sedang dibangun."
 }

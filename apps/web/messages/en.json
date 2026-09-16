@@ -205,5 +205,11 @@
 	"manage_visibility_note": "Visibility alone never publishes a draft.",
 	"visibility_public": "Public",
 	"visibility_unlisted": "Unlisted",
-	"visibility_private": "Private"
+	"visibility_private": "Private",
+	"dashboard_my_comics": "My Comics",
+	"dashboard_view_site": "View Site",
+	"dashboard_menu": "Dashboard menu",
+	"dashboard_comics_soon": "Your comic list will appear here.",
+	"dashboard_upload_soon": "The chapter upload form moves here.",
+	"dashboard_placeholder_note": "This page is under construction."
 }
