@@ -59,3 +59,4 @@ temp
 
 # Local comic file storage (storage module root)
 apps/server/.storage/
+.worktrees/
